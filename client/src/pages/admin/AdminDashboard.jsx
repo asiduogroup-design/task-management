@@ -1,65 +1,66 @@
 import { useEffect, useState } from 'react';
-import DashboardShell from '../../components/DashboardShell.jsx';
-import StatCard from '../../components/StatCard.jsx';
-import api from '../../config/api.js';
+import { Link } from 'react-router-dom';
+import DataTable from '../../components/common/DataTable.jsx';
+import StatCard from '../../components/common/StatCard.jsx';
+import StatusBadge from '../../components/common/StatusBadge.jsx';
+import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
+import { attendanceService } from '../../services/attendanceService.js';
+import { employeeService } from '../../services/employeeService.js';
+import { projectService } from '../../services/projectService.js';
+import { taskService } from '../../services/taskService.js';
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({ totalEmployees: 0, activeEmployees: 0, inactiveEmployees: 0 });
-  const [employees, setEmployees] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [state, setState] = useState({ employees: [], attendance: [], projects: [], tasks: [] });
 
   useEffect(() => {
-    const loadAdminData = async () => {
-      const [statsResponse, employeesResponse, tasksResponse] = await Promise.all([
-        api.get('/users/stats'),
-        api.get('/users/employees'),
-        api.get('/tasks')
-      ]);
-
-      setStats(statsResponse.data);
-      setEmployees(employeesResponse.data.employees);
-      setTasks(tasksResponse.data.tasks);
-    };
-
-    loadAdminData().catch(() => {});
+    Promise.all([employeeService.list(), attendanceService.admin(), projectService.list(), taskService.list()])
+      .then(([employees, attendance, projects, tasks]) => {
+        setState({
+          employees: employees.data.employees || [],
+          attendance: attendance.data.records || [],
+          projects: projects.data.projects || [],
+          tasks: tasks.data.tasks || []
+        });
+      })
+      .catch(() => {});
   }, []);
 
+  const completed = state.tasks.filter((task) => task.status === 'completed').length;
+  const pending = state.tasks.filter((task) => !['completed'].includes(task.status)).length;
+  const overdue = state.tasks.filter((task) => task.status === 'overdue' || (task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed')).length;
+
   return (
-    <DashboardShell title="Admin Dashboard" subtitle="Workspace overview">
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Employees" value={stats.totalEmployees} tone="brand" />
-        <StatCard label="Active" value={stats.activeEmployees} tone="mint" />
-        <StatCard label="Inactive" value={stats.inactiveEmployees} tone="amber" />
+    <DashboardLayout title="Admin Dashboard">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Total employees" value={state.employees.length} />
+        <StatCard label="Logged in today" value={state.attendance.filter((row) => row.loginTime).length} />
+        <StatCard label="Active projects" value={state.projects.filter((project) => project.status === 'active').length} />
+        <StatCard label="Pending tasks" value={pending} helper={`${completed} completed · ${overdue} overdue`} />
       </div>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Employees</h3>
-          <div className="mt-4 space-y-3">
-            {employees.length === 0 && <p className="text-sm text-slate-500">No employees found.</p>}
-            {employees.map((employee) => (
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3" key={employee._id}>
-                <p className="font-semibold text-ink">{employee.name}</p>
-                <p className="text-sm text-slate-500">{employee.jobTitle || 'Employee'} · {employee.department || 'Unassigned'}</p>
-              </div>
-            ))}
-          </div>
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <section>
+          <h3 className="mb-3 font-black text-slate-950">Today attendance</h3>
+          <DataTable
+            columns={[
+              { key: 'employee', label: 'Employee', render: (row) => row.employeeId?.userId?.name || '-' },
+              { key: 'loginTime', label: 'Login', render: (row) => row.loginTime ? new Date(row.loginTime).toLocaleTimeString() : '-' },
+              { key: 'logoutTime', label: 'Logout', render: (row) => row.logoutTime ? new Date(row.logoutTime).toLocaleTimeString() : '-' },
+              { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> }
+            ]}
+            rows={state.attendance.slice(0, 6)}
+          />
         </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Recent tasks</h3>
-          <div className="mt-4 space-y-3">
-            {tasks.length === 0 && <p className="text-sm text-slate-500">No tasks created yet.</p>}
-            {tasks.map((task) => (
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3" key={task._id}>
-                <p className="font-semibold text-ink">{task.title}</p>
-                <p className="text-sm capitalize text-slate-500">{task.status} · {task.priority} priority</p>
-              </div>
-            ))}
+        <section>
+          <h3 className="mb-3 font-black text-slate-950">Quick actions</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link className="btn-primary" to="/admin/employees/add">Add employee</Link>
+            <Link className="btn-primary" to="/admin/projects/add">Create project</Link>
+            <Link className="btn-primary" to="/admin/tasks/add">Assign task</Link>
+            <Link className="btn-secondary" to="/admin/reports">View reports</Link>
           </div>
         </section>
       </div>
-    </DashboardShell>
+    </DashboardLayout>
   );
 };
 

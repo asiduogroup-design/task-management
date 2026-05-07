@@ -1,5 +1,9 @@
 const colors = {
   active: 'bg-emerald-50 text-emerald-700',
+  not_started: 'bg-slate-100 text-slate-700',
+  on_hold: 'bg-amber-50 text-amber-700',
+  cancelled: 'bg-rose-50 text-rose-700',
+  archived: 'bg-slate-200 text-slate-700',
   inactive: 'bg-slate-100 text-slate-700',
   completed: 'bg-emerald-50 text-emerald-700',
   approved: 'bg-emerald-50 text-emerald-700',

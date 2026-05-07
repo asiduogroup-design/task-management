@@ -1,10 +1,19 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useNotifications } from '../../context/NotificationContext.jsx';
+
+const notificationsPathByRole = {
+  super_admin: '/admin/notifications',
+  admin: '/admin/notifications',
+  manager: '/manager/notifications',
+  employee: '/employee/notifications'
+};
 
 const Navbar = ({ onMenu }) => {
   const { user } = useAuth();
   const { unreadCount, loadNotifications } = useNotifications();
+  const notificationsPath = notificationsPathByRole[user?.role] || '/admin/notifications';
 
   useEffect(() => {
     loadNotifications().catch(() => {});
@@ -18,10 +27,10 @@ const Navbar = ({ onMenu }) => {
           <input className="form-field hidden w-80 md:block" placeholder="Search workspace..." />
         </div>
         <div className="flex items-center gap-4">
-          <div className="relative rounded-md border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">
+          <Link className="relative rounded-md border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700" to={notificationsPath}>
             Notifications
             {unreadCount > 0 && <span className="ml-2 rounded bg-blue-700 px-2 py-0.5 text-xs text-white">{unreadCount}</span>}
-          </div>
+          </Link>
           <div className="text-right">
             <p className="text-sm font-bold text-slate-950">{user?.name}</p>
             <p className="text-xs capitalize text-slate-500">{String(user?.role || '').replace('_', ' ')}</p>

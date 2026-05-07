@@ -10,11 +10,16 @@ const notificationSchema = new mongoose.Schema(
       enum: ['task', 'attendance', 'leave', 'project', 'daily_update', 'system'],
       default: 'system'
     },
+    subtype: { type: String, default: '' },
     isRead: { type: Boolean, default: false },
-    referenceId: { type: mongoose.Schema.Types.ObjectId }
+    referenceId: { type: mongoose.Schema.Types.ObjectId },
+    actionPath: { type: String, default: '' },
+    eventKey: { type: String }
   },
   { timestamps: true }
 );
+
+notificationSchema.index({ userId: 1, eventKey: 1 }, { unique: true, sparse: true });
 
 const Notification = mongoose.model('Notification', notificationSchema);
 

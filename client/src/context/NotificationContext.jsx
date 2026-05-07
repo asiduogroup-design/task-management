@@ -18,8 +18,13 @@ export const NotificationProvider = ({ children }) => {
     await loadNotifications();
   };
 
+  const removeNotification = async (id) => {
+    await notificationService.remove(id);
+    await loadNotifications();
+  };
+
   const value = useMemo(
-    () => ({ notifications, unreadCount, loadNotifications, markRead }),
+    () => ({ notifications, unreadCount, loadNotifications, markRead, removeNotification }),
     [notifications, unreadCount]
   );
 

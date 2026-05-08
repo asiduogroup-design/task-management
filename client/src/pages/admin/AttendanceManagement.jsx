@@ -1,106 +1,544 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import DataTable from '../../components/common/DataTable.jsx';
-import SearchFilterBar from '../../components/common/SearchFilterBar.jsx';
+import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import Modal from '../../components/common/Modal.jsx';
 import StatusBadge from '../../components/common/StatusBadge.jsx';
 import { attendanceService } from '../../services/attendanceService.js';
 import { employeeService } from '../../services/employeeService.js';
 import ModulePage from '../shared/ModulePage.jsx';
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '-');
-const formatTime = (value) => (value ? new Date(value).toLocaleTimeString() : '-');
+/* ── helpers ──────────────────────────────────────────────────────────────── */
+const fmt = (val) => (val ? new Date(val).toLocaleDateString('en-IN') : '–');
+const fmtTime = (val) => (val ? new Date(val).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '–');
+const fmtHours = (h) => (h != null ? `${Number(h).toFixed(2)} hr` : '–');
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'All statuses' },
+  { value: 'logged_in', label: 'Logged in' },
+  { value: 'logged_out', label: 'Logged out' },
+  { value: 'on_break', label: 'On break' },
+  { value: 'late', label: 'Late' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'on_leave', label: 'On leave' },
+  { value: 'missing_logout', label: 'Missing logout' }
+];
+
+/* ── Summary stat card ────────────────────────────────────────────────────── */
+const SummaryCard = ({ label, value, colorClass }) => (
+  <div className={`flex flex-col gap-1 rounded-md border border-slate-200 bg-white p-4 shadow-sm`}>
+    <span className={`text-xs font-bold uppercase tracking-wide ${colorClass}`}>{label}</span>
+    <span className="text-3xl font-bold text-slate-900">{value ?? '–'}</span>
+  </div>
+);
+
+/* ── Detail Modal ─────────────────────────────────────────────────────────── */
+const DetailModal = ({ record, onClose, onEdit, onMarkAbsent }) => {
+  const emp = record.employeeId;
+  const name = emp?.userId?.name || '–';
+  const code = emp?.employeeCode || '–';
+  const dept = emp?.department || '–';
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 p-4">
+      <section className="w-full max-w-xl rounded-md bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Attendance Detail</h2>
+          <button className="btn-secondary" type="button" onClick={onClose}>Close</button>
+        </div>
+
+        {/* Employee info */}
+        <div className="mb-4 grid grid-cols-2 gap-3 rounded-md bg-slate-50 p-4 text-sm">
+          <div><span className="font-semibold text-slate-500">Name</span><p className="text-slate-900">{name}</p></div>
+          <div><span className="font-semibold text-slate-500">Employee ID</span><p className="text-slate-900">{code}</p></div>
+          <div><span className="font-semibold text-slate-500">Department</span><p className="text-slate-900">{dept}</p></div>
+          <div><span className="font-semibold text-slate-500">Date</span><p className="text-slate-900">{fmt(record.date)}</p></div>
+        </div>
+
+        {/* Timestamps */}
+        <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-md border border-slate-200 p-3">
+            <p className="mb-1 font-semibold text-slate-500">Login Time</p>
+            <p className="text-slate-900">{fmtTime(record.loginTime)}</p>
+          </div>
+          <div className="rounded-md border border-slate-200 p-3">
+            <p className="mb-1 font-semibold text-slate-500">Logout Time</p>
+            <p className="text-slate-900">{fmtTime(record.logoutTime)}</p>
+          </div>
+          <div className="rounded-md border border-slate-200 p-3">
+            <p className="mb-1 font-semibold text-slate-500">Total Working Hours</p>
+            <p className="text-slate-900">{fmtHours(record.totalWorkingHours)}</p>
+          </div>
+          <div className="rounded-md border border-slate-200 p-3">
+            <p className="mb-1 font-semibold text-slate-500">Total Break</p>
+            <p className="text-slate-900">{record.totalBreakMinutes ? `${record.totalBreakMinutes} min` : '–'}</p>
+          </div>
+        </div>
+
+        {/* Productive hours */}
+        <div className="mb-4 rounded-md border border-slate-200 p-3 text-sm">
+          <p className="mb-1 font-semibold text-slate-500">Total Productive Hours</p>
+          <p className="text-slate-900">
+            {record.loginTime && record.logoutTime
+              ? fmtHours(record.totalWorkingHours)
+              : '–'}
+          </p>
+        </div>
+
+        {/* Break details */}
+        {record.breaks?.length > 0 && (
+          <div className="mb-4">
+            <p className="mb-2 text-sm font-semibold text-slate-600">Break Details</p>
+            <div className="overflow-hidden rounded-md border border-slate-200 text-sm">
+              <table className="w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-bold text-slate-600">#</th>
+                    <th className="px-3 py-2 text-left font-bold text-slate-600">Start</th>
+                    <th className="px-3 py-2 text-left font-bold text-slate-600">End</th>
+                    <th className="px-3 py-2 text-left font-bold text-slate-600">Duration</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {record.breaks.map((b, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2 text-slate-700">{i + 1}</td>
+                      <td className="px-3 py-2 text-slate-700">{fmtTime(b.startTime)}</td>
+                      <td className="px-3 py-2 text-slate-700">{fmtTime(b.endTime)}</td>
+                      <td className="px-3 py-2 text-slate-700">{b.durationMinutes} min</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Device / location */}
+        <div className="mb-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+          {record.ipAddress && (
+            <div className="rounded-md border border-slate-200 p-3">
+              <p className="mb-1 font-semibold text-slate-500">IP Address</p>
+              <p className="break-all text-slate-900">{record.ipAddress}</p>
+            </div>
+          )}
+          {record.deviceInfo && (
+            <div className="rounded-md border border-slate-200 p-3 sm:col-span-2">
+              <p className="mb-1 font-semibold text-slate-500">Device</p>
+              <p className="truncate text-slate-900" title={record.deviceInfo}>{record.deviceInfo}</p>
+            </div>
+          )}
+          {record.location && (
+            <div className="rounded-md border border-slate-200 p-3">
+              <p className="mb-1 font-semibold text-slate-500">Location</p>
+              <p className="text-slate-900">{record.location}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Status & remarks */}
+        <div className="mb-5 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="mb-1 font-semibold text-slate-500">Status</p>
+            <StatusBadge status={record.status} />
+            {record.earlyLogout && <span className="ml-2 rounded bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-700">Early Logout</span>}
+          </div>
+          <div>
+            <p className="mb-1 font-semibold text-slate-500">Remarks</p>
+            <p className="text-slate-900">{record.remarks || '–'}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button className="btn-primary" type="button" onClick={() => onEdit(record)}>Edit Attendance</button>
+          {record.status !== 'absent' && (
+            <button
+              className="rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100"
+              type="button"
+              onClick={() => onMarkAbsent(record)}
+            >
+              Mark Absent
+            </button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};
+
+/* ── Edit Modal ───────────────────────────────────────────────────────────── */
+const EditModal = ({ record, onClose, onSave }) => {
+  const [form, setForm] = useState({
+    loginTime: record.loginTime ? new Date(record.loginTime).toISOString().slice(0, 16) : '',
+    logoutTime: record.logoutTime ? new Date(record.logoutTime).toISOString().slice(0, 16) : '',
+    status: record.status || '',
+    remarks: record.remarks || '',
+    location: record.location || ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        loginTime: form.loginTime ? new Date(form.loginTime).toISOString() : undefined,
+        logoutTime: form.logoutTime ? new Date(form.logoutTime).toISOString() : undefined,
+        status: form.status,
+        remarks: form.remarks,
+        location: form.location
+      };
+      await onSave(record._id, payload);
+      onClose();
+    } catch {
+      setError('Failed to save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="Edit Attendance" onClose={onClose}>
+      {error && <p className="mb-3 rounded bg-red-50 p-2 text-xs font-semibold text-red-700">{error}</p>}
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-600">Login Time</label>
+          <input className="form-field w-full" type="datetime-local" value={form.loginTime} onChange={(e) => set('loginTime', e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-600">Logout Time</label>
+          <input className="form-field w-full" type="datetime-local" value={form.logoutTime} onChange={(e) => set('logoutTime', e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-600">Status</label>
+          <select className="form-field w-full" value={form.status} onChange={(e) => set('status', e.target.value)}>
+            {STATUS_OPTIONS.filter((o) => o.value).map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-600">Location</label>
+          <input className="form-field w-full" type="text" value={form.location} onChange={(e) => set('location', e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-600">Remarks</label>
+          <textarea className="form-field w-full" rows={2} value={form.remarks} onChange={(e) => set('remarks', e.target.value)} />
+        </div>
+        <div className="flex justify-end gap-3 pt-1">
+          <button className="btn-secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" type="button" disabled={saving} onClick={handleSave}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+/* ── Mark Absent Modal ────────────────────────────────────────────────────── */
+const MarkAbsentModal = ({ record, onClose, onConfirm }) => {
+  const [remarks, setRemarks] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    try {
+      await onConfirm(record, remarks);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="Mark Absent" onClose={onClose}>
+      <p className="mb-3 text-sm text-slate-700">
+        Mark <strong>{record.employeeId?.userId?.name || record.employeeId?.employeeCode}</strong> as absent on <strong>{fmt(record.date)}</strong>?
+      </p>
+      <div className="mb-4">
+        <label className="mb-1 block text-xs font-semibold text-slate-600">Remarks (optional)</label>
+        <textarea className="form-field w-full" rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+      </div>
+      <div className="flex justify-end gap-3">
+        <button className="btn-secondary" type="button" onClick={onClose}>Cancel</button>
+        <button
+          className="rounded-md bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+          type="button"
+          disabled={saving}
+          onClick={handleConfirm}
+        >
+          {saving ? 'Saving…' : 'Confirm'}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+/* ── Main page ────────────────────────────────────────────────────────────── */
 const AttendanceManagement = () => {
-	const [searchParams] = useSearchParams();
-	const [records, setRecords] = useState([]);
-	const [employees, setEmployees] = useState([]);
-	const [search, setSearch] = useState('');
-	const [filters, setFilters] = useState({
-		employeeId: searchParams.get('employeeId') || '',
-		status: '',
-		fromDate: '',
-		toDate: ''
-	});
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState('');
+  const [searchParams] = useSearchParams();
+  const [records, setRecords] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState({
+    employeeId: searchParams.get('employeeId') || '',
+    status: '',
+    fromDate: new Date().toISOString().slice(0, 10),
+    toDate: new Date().toISOString().slice(0, 10),
+    department: '',
+    lateLogin: '',
+    earlyLogout: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [detailRecord, setDetailRecord] = useState(null);
+  const [editRecord, setEditRecord] = useState(null);
+  const [absentRecord, setAbsentRecord] = useState(null);
 
-	const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
+  const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
 
-	const loadRecords = async () => {
-		setLoading(true);
-		setError('');
-		try {
-			const { data } = await attendanceService.admin({
-				search: search || undefined,
-				employeeId: filters.employeeId || undefined,
-				status: filters.status || undefined,
-				fromDate: filters.fromDate || undefined,
-				toDate: filters.toDate || undefined
-			});
-			setRecords(data.records || []);
-		} catch (err) {
-			setRecords([]);
-			setError('Unable to load attendance records.');
-		} finally {
-			setLoading(false);
-		}
-	};
+  const buildParams = useCallback(() => ({
+    search: search || undefined,
+    employeeId: filters.employeeId || undefined,
+    status: filters.status || undefined,
+    fromDate: filters.fromDate || undefined,
+    toDate: filters.toDate || undefined,
+    department: filters.department || undefined,
+    lateLogin: filters.lateLogin || undefined,
+    earlyLogout: filters.earlyLogout || undefined
+  }), [search, filters]);
 
-	useEffect(() => {
-		loadRecords();
-	}, [search, filters.employeeId, filters.status, filters.fromDate, filters.toDate]);
+  const loadRecords = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await attendanceService.admin(buildParams());
+      setRecords(data.records || []);
+    } catch {
+      setRecords([]);
+      setError('Unable to load attendance records.');
+    } finally {
+      setLoading(false);
+    }
+  }, [buildParams]);
 
-	useEffect(() => {
-		employeeService.list().then(({ data }) => setEmployees(data.employees || [])).catch(() => setEmployees([]));
-	}, []);
+  const loadSummary = useCallback(async () => {
+    try {
+      const dateParam = filters.fromDate || new Date().toISOString().slice(0, 10);
+      const { data } = await attendanceService.summary({ date: dateParam });
+      setSummary(data);
+    } catch {
+      setSummary(null);
+    }
+  }, [filters.fromDate]);
 
-	return (
-		<ModulePage title="Attendance Management">
-			<SearchFilterBar search={search} setSearch={setSearch}>
-				<select className="form-field md:max-w-xs" value={filters.employeeId} onChange={(event) => setFilter('employeeId', event.target.value)}>
-					<option value="">All employees</option>
-					{employees.map((employee) => (
-						<option key={employee._id} value={employee._id}>{employee.userId?.name || employee.employeeCode}</option>
-					))}
-				</select>
-				<select className="form-field md:max-w-xs" value={filters.status} onChange={(event) => setFilter('status', event.target.value)}>
-					<option value="">All statuses</option>
-					<option value="logged_in">Logged in</option>
-					<option value="logged_out">Logged out</option>
-					<option value="on_break">On break</option>
-					<option value="late">Late</option>
-					<option value="absent">Absent</option>
-				</select>
-				<input className="form-field md:max-w-xs" type="date" value={filters.fromDate} onChange={(event) => setFilter('fromDate', event.target.value)} />
-				<input className="form-field md:max-w-xs" type="date" value={filters.toDate} onChange={(event) => setFilter('toDate', event.target.value)} />
-			</SearchFilterBar>
-			{error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-			<DataTable
-				empty={loading ? 'Loading attendance...' : 'No attendance records found.'}
-				columns={[
-					{ key: 'date', label: 'Date', render: (row) => formatDate(row.date) },
-					{ key: 'employeeCode', label: 'Employee ID', render: (row) => row.employeeId?.employeeCode || '-' },
-					{ key: 'employeeName', label: 'Employee name', render: (row) => row.employeeId?.userId?.name || '-' },
-					{ key: 'department', label: 'Department', render: (row) => row.employeeId?.department || '-' },
-					{ key: 'designation', label: 'Designation', render: (row) => row.employeeId?.designation || '-' },
-					{ key: 'loginTime', label: 'Login', render: (row) => formatTime(row.loginTime) },
-					{ key: 'logoutTime', label: 'Logout', render: (row) => formatTime(row.logoutTime) },
-					{ key: 'workingHours', label: 'Working hours', render: (row) => row.totalWorkingHours || 0 },
-					{ key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
-					{
-						key: 'actions',
-						label: 'Actions',
-						render: (row) => (
-							row.employeeId?._id
-								? <Link className="font-bold text-blue-700" to={`/admin/employees/${row.employeeId._id}`}>View profile</Link>
-								: '-'
-						)
-					}
-				]}
-				rows={records}
-			/>
-		</ModulePage>
-	);
+  useEffect(() => { loadRecords(); }, [loadRecords]);
+  useEffect(() => { loadSummary(); }, [loadSummary]);
+
+  useEffect(() => {
+    employeeService.list().then(({ data }) => {
+      const emps = data.employees || [];
+      setEmployees(emps);
+      const depts = [...new Set(emps.map((e) => e.department).filter(Boolean))].sort();
+      setDepartments(depts);
+    }).catch(() => {});
+  }, []);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { data } = await attendanceService.export(buildParams());
+      const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'attendance.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Export failed. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleSave = async (id, payload) => {
+    await attendanceService.update(id, payload);
+    await loadRecords();
+    await loadSummary();
+    if (detailRecord?._id === id) {
+      const updated = records.find((r) => r._id === id);
+      if (updated) setDetailRecord(updated);
+    }
+  };
+
+  const handleMarkAbsent = async (record, remarks) => {
+    await attendanceService.markAbsent({
+      employeeId: record.employeeId?._id,
+      date: record.date,
+      remarks
+    });
+    await loadRecords();
+    await loadSummary();
+  };
+
+  return (
+    <ModulePage
+      title="Attendance Management"
+      actions={
+        <button
+          className="btn-primary ml-auto"
+          type="button"
+          disabled={exporting}
+          onClick={handleExport}
+        >
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </button>
+      }
+    >
+      {/* ── Summary ── */}
+      <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <SummaryCard label="Total Employees" value={summary?.totalEmployees} colorClass="text-slate-600" />
+        <SummaryCard label="Present Today" value={summary?.present} colorClass="text-emerald-600" />
+        <SummaryCard label="Absent" value={summary?.absent} colorClass="text-red-600" />
+        <SummaryCard label="Late Login" value={summary?.lateLogin} colorClass="text-orange-600" />
+        <SummaryCard label="Early Logout" value={summary?.earlyLogout} colorClass="text-amber-600" />
+        <SummaryCard label="On Leave" value={summary?.onLeave} colorClass="text-blue-600" />
+      </section>
+
+      {/* ── Filters ── */}
+      <div className="mb-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            className="form-field md:max-w-xs"
+            placeholder="Search by name or ID…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select className="form-field md:max-w-xs" value={filters.employeeId} onChange={(e) => setFilter('employeeId', e.target.value)}>
+            <option value="">All employees</option>
+            {employees.map((emp) => (
+              <option key={emp._id} value={emp._id}>{emp.userId?.name || emp.employeeCode}</option>
+            ))}
+          </select>
+          <select className="form-field md:max-w-xs" value={filters.department} onChange={(e) => setFilter('department', e.target.value)}>
+            <option value="">All departments</option>
+            {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select className="form-field md:max-w-xs" value={filters.status} onChange={(e) => setFilter('status', e.target.value)}>
+            {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <select className="form-field md:max-w-xs" value={filters.lateLogin} onChange={(e) => setFilter('lateLogin', e.target.value)}>
+            <option value="">All logins</option>
+            <option value="true">Late logins only</option>
+          </select>
+          <select className="form-field md:max-w-xs" value={filters.earlyLogout} onChange={(e) => setFilter('earlyLogout', e.target.value)}>
+            <option value="">All logouts</option>
+            <option value="true">Early logouts only</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-500">From</label>
+            <input className="form-field" type="date" value={filters.fromDate} onChange={(e) => setFilter('fromDate', e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-500">To</label>
+            <input className="form-field" type="date" value={filters.toDate} onChange={(e) => setFilter('toDate', e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Error ── */}
+      {error && <p className="mb-4 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+
+      {/* ── Table ── */}
+      <div className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                {['Date', 'Employee Name', 'Employee ID', 'Department', 'Login', 'Logout', 'Working Hours', 'Status', 'Remarks', 'Actions'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left font-bold text-slate-600">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading && (
+                <tr><td className="px-4 py-6 text-center text-slate-500" colSpan={10}>Loading attendance…</td></tr>
+              )}
+              {!loading && records.length === 0 && (
+                <tr><td className="px-4 py-6 text-center text-slate-500" colSpan={10}>No attendance records found.</td></tr>
+              )}
+              {!loading && records.map((row, idx) => (
+                <tr
+                  key={row._id || idx}
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => setDetailRecord(row)}
+                >
+                  <td className="px-4 py-3 text-slate-700">{fmt(row.date)}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{row.employeeId?.userId?.name || '–'}</td>
+                  <td className="px-4 py-3 text-slate-700">{row.employeeId?.employeeCode || '–'}</td>
+                  <td className="px-4 py-3 text-slate-700">{row.employeeId?.department || '–'}</td>
+                  <td className="px-4 py-3 text-slate-700">{fmtTime(row.loginTime)}</td>
+                  <td className="px-4 py-3 text-slate-700">
+                    {fmtTime(row.logoutTime)}
+                    {row.earlyLogout && <span className="ml-1 rounded bg-orange-50 px-1 py-0.5 text-[10px] font-bold text-orange-600">Early</span>}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{fmtHours(row.totalWorkingHours)}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={row.status} />
+                  </td>
+                  <td className="max-w-[140px] truncate px-4 py-3 text-slate-500" title={row.remarks}>{row.remarks || '–'}</td>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-2">
+                      <button
+                        className="text-xs font-semibold text-blue-700 hover:underline"
+                        type="button"
+                        onClick={() => setEditRecord(row)}
+                      >Edit</button>
+                      <button
+                        className="text-xs font-semibold text-red-600 hover:underline"
+                        type="button"
+                        onClick={() => setAbsentRecord(row)}
+                      >Absent</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Modals ── */}
+      {detailRecord && (
+        <DetailModal
+          record={detailRecord}
+          onClose={() => setDetailRecord(null)}
+          onEdit={(r) => { setDetailRecord(null); setEditRecord(r); }}
+          onMarkAbsent={(r) => { setDetailRecord(null); setAbsentRecord(r); }}
+        />
+      )}
+      {editRecord && (
+        <EditModal
+          record={editRecord}
+          onClose={() => setEditRecord(null)}
+          onSave={handleSave}
+        />
+      )}
+      {absentRecord && (
+        <MarkAbsentModal
+          record={absentRecord}
+          onClose={() => setAbsentRecord(null)}
+          onConfirm={handleMarkAbsent}
+        />
+      )}
+    </ModulePage>
+  );
 };
 
 export default AttendanceManagement;

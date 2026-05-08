@@ -5,6 +5,7 @@ const employeeSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     employeeCode: { type: String, required: true, unique: true, trim: true },
     phone: { type: String, default: '' },
+    email: { type: String, default: '', lowercase: true, trim: true },
     photoUrl: { type: String, default: '' },
     gender: { type: String, enum: ['', 'male', 'female', 'other'], default: '' },
     dateOfBirth: Date,
@@ -14,9 +15,11 @@ const employeeSchema = new mongoose.Schema(
     reportingManagerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
     joiningDate: { type: Date, default: Date.now },
     employmentType: { type: String, enum: ['full-time', 'part-time', 'intern', 'contract'], default: 'full-time' },
+    workingHours: { type: String, default: '8 hours' },
     shiftStartTime: { type: String, default: '09:30' },
     shiftEndTime: { type: String, default: '18:30' },
     weeklyOffDays: [{ type: String }],
+    attendanceRule: { type: String, default: 'standard' },
     lateLoginRule: { type: String, default: '09:45' }
   },
   { timestamps: true }

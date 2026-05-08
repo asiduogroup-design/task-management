@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import FormInput from '../../components/common/FormInput.jsx';
 import ModulePage from '../shared/ModulePage.jsx';
 import { employeeService } from '../../services/employeeService.js';
@@ -18,8 +18,10 @@ const toDateInput = (date) => (date ? new Date(date).toISOString().slice(0, 10) 
 
 const ProjectForm = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
+  const selectedEmployeeId = searchParams.get('employeeId') || '';
   const [employees, setEmployees] = useState([]);
   const [form, setForm] = useState({
     name: '',
@@ -83,6 +85,16 @@ const ProjectForm = () => {
       });
     }).catch(() => setError('Unable to load project details'));
   }, [id, isEdit]);
+
+  useEffect(() => {
+    if (isEdit || !selectedEmployeeId) return;
+    setForm((current) => ({
+      ...current,
+      members: current.members.some((member) => member.employeeId === selectedEmployeeId)
+        ? current.members
+        : [{ employeeId: selectedEmployeeId, role: 'Developer' }]
+    }));
+  }, [isEdit, selectedEmployeeId]);
 
   const employeeOptions = useMemo(
     () => [

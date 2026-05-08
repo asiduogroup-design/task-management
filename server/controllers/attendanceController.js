@@ -104,9 +104,41 @@ export const getAttendanceHistory = asyncHandler(async (req, res) => {
 });
 
 export const getAdminAttendance = asyncHandler(async (req, res) => {
-  const records = await Attendance.find({})
-    .populate({ path: 'employeeId', populate: { path: 'userId', select: 'name email' } })
+  const { employeeId, status, fromDate, toDate, search } = req.query;
+  const query = {};
+
+  if (employeeId) query.employeeId = employeeId;
+  if (status) query.status = status;
+
+  if (fromDate || toDate) {
+    query.date = {};
+    if (fromDate) {
+      const from = new Date(fromDate);
+      if (!Number.isNaN(from.getTime())) query.date.$gte = from;
+    }
+    if (toDate) {
+      const to = new Date(toDate);
+      if (!Number.isNaN(to.getTime())) {
+        to.setHours(23, 59, 59, 999);
+        query.date.$lte = to;
+      }
+    }
+    if (!Object.keys(query.date).length) delete query.date;
+  }
+
+  let records = await Attendance.find(query)
+    .populate({ path: 'employeeId', select: 'employeeCode department designation', populate: { path: 'userId', select: 'name email' } })
     .sort({ date: -1 });
+
+  if (search) {
+    const normalized = String(search).toLowerCase().trim();
+    records = records.filter((record) =>
+      record.employeeId?.employeeCode?.toLowerCase().includes(normalized) ||
+      record.employeeId?.userId?.name?.toLowerCase().includes(normalized) ||
+      record.employeeId?.userId?.email?.toLowerCase().includes(normalized)
+    );
+  }
+
   res.json({ records });
 });
 

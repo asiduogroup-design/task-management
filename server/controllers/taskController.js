@@ -12,9 +12,24 @@ const taskQueryForUser = (req) => {
 };
 
 export const getTasks = asyncHandler(async (req, res) => {
-  const tasks = await Task.find(taskQueryForUser(req))
+  const { search, status, employeeId, projectId } = req.query;
+  const query = taskQueryForUser(req);
+
+  if (status) query.status = status;
+  if (employeeId) query.assignedTo = employeeId;
+  if (projectId) query.projectId = projectId;
+  if (search) {
+    const normalized = String(search).trim();
+    query.$or = [
+      { taskCode: { $regex: normalized, $options: 'i' } },
+      { title: { $regex: normalized, $options: 'i' } },
+      { description: { $regex: normalized, $options: 'i' } }
+    ];
+  }
+
+  const tasks = await Task.find(query)
     .populate('projectId', 'name projectCode')
-    .populate({ path: 'assignedTo', populate: { path: 'userId', select: 'name email' } })
+    .populate({ path: 'assignedTo', select: 'employeeCode department', populate: { path: 'userId', select: 'name email' } })
     .populate('assignedBy', 'name email')
     .sort({ createdAt: -1 });
   res.json({ tasks });

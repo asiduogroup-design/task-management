@@ -1,64 +1,77 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import DataTable from '../../components/common/DataTable.jsx';
-import StatCard from '../../components/common/StatCard.jsx';
-import StatusBadge from '../../components/common/StatusBadge.jsx';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
-import { attendanceService } from '../../services/attendanceService.js';
-import { employeeService } from '../../services/employeeService.js';
-import { projectService } from '../../services/projectService.js';
-import { taskService } from '../../services/taskService.js';
+import LoadingScreen from '../../components/LoadingScreen.jsx';
+import { dashboardService } from '../../services/dashboardService.js';
+import SummaryCards from '../../components/dashboard/SummaryCards.jsx';
+import AttendanceSection from '../../components/dashboard/AttendanceSection.jsx';
+import ProjectsSection from '../../components/dashboard/ProjectsSection.jsx';
+import TasksSection from '../../components/dashboard/TasksSection.jsx';
+import AlertsSection from '../../components/dashboard/AlertsSection.jsx';
+import QuickActionsSection from '../../components/dashboard/QuickActionsSection.jsx';
 
 const AdminDashboard = () => {
-  const [state, setState] = useState({ employees: [], attendance: [], projects: [], tasks: [] });
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    summary: {},
+    attendance: [],
+    projects: [],
+    tasks: {},
+    alerts: {}
+  });
 
   useEffect(() => {
-    Promise.all([employeeService.list(), attendanceService.admin(), projectService.list(), taskService.list()])
-      .then(([employees, attendance, projects, tasks]) => {
-        setState({
-          employees: employees.data.employees || [],
-          attendance: attendance.data.records || [],
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const [summary, attendance, projects, tasks, alerts] = await Promise.all([
+          dashboardService.getSummary(),
+          dashboardService.getAttendance(),
+          dashboardService.getProjects(),
+          dashboardService.getTasks(),
+          dashboardService.getAlerts()
+        ]);
+
+        setData({
+          summary: summary.data.summary || {},
+          attendance: attendance.data.attendance || [],
           projects: projects.data.projects || [],
-          tasks: tasks.data.tasks || []
+          tasks: tasks.data || {},
+          alerts: alerts.data.alerts || {}
         });
-      })
-      .catch(() => {});
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
-  const completed = state.tasks.filter((task) => task.status === 'completed').length;
-  const pending = state.tasks.filter((task) => !['completed'].includes(task.status)).length;
-  const overdue = state.tasks.filter((task) => task.status === 'overdue' || (task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed')).length;
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <DashboardLayout title="Admin Dashboard">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total employees" value={state.employees.length} />
-        <StatCard label="Logged in today" value={state.attendance.filter((row) => row.loginTime).length} />
-        <StatCard label="Active projects" value={state.projects.filter((project) => project.status === 'active').length} />
-        <StatCard label="Pending tasks" value={pending} helper={`${completed} completed · ${overdue} overdue`} />
-      </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <section>
-          <h3 className="mb-3 font-black text-slate-950">Today attendance</h3>
-          <DataTable
-            columns={[
-              { key: 'employee', label: 'Employee', render: (row) => row.employeeId?.userId?.name || '-' },
-              { key: 'loginTime', label: 'Login', render: (row) => row.loginTime ? new Date(row.loginTime).toLocaleTimeString() : '-' },
-              { key: 'logoutTime', label: 'Logout', render: (row) => row.logoutTime ? new Date(row.logoutTime).toLocaleTimeString() : '-' },
-              { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> }
-            ]}
-            rows={state.attendance.slice(0, 6)}
-          />
-        </section>
-        <section>
-          <h3 className="mb-3 font-black text-slate-950">Quick actions</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Link className="btn-primary" to="/admin/employees/add">Add employee</Link>
-            <Link className="btn-primary" to="/admin/projects/add">Create project</Link>
-            <Link className="btn-primary" to="/admin/tasks/add">Assign task</Link>
-            <Link className="btn-secondary" to="/admin/reports">View reports</Link>
-          </div>
-        </section>
+      <div className="space-y-6">
+        {/* 1. Top Summary Cards */}
+        <SummaryCards summary={data.summary} />
+
+        {/* 2. Today's Attendance and Projects Overview */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AttendanceSection attendance={data.attendance} />
+          <ProjectsSection projects={data.projects} />
+        </div>
+
+        {/* 3. Tasks Overview */}
+        <TasksSection tasks={data.tasks} stats={data.tasks.stats} />
+
+        {/* 4. Notifications and Alerts */}
+        <AlertsSection alerts={data.alerts} />
+
+        {/* 5. Quick Actions */}
+        <QuickActionsSection />
       </div>
     </DashboardLayout>
   );

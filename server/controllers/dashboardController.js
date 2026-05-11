@@ -1,0 +1,364 @@
+import asyncHandler from 'express-async-handler';
+import Attendance from '../models/Attendance.js';
+import Employee from '../models/Employee.js';
+import Task from '../models/Task.js';
+import Project from '../models/Project.js';
+import Notification from '../models/Notification.js';
+import LeaveRequest from '../models/LeaveRequest.js';
+import DailyWorkUpdate from '../models/DailyWorkUpdate.js';
+import { dateOnly } from '../utils/calculateHours.js';
+
+const startOfDay = (date = new Date()) => {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+};
+
+const endOfDay = (date = new Date()) => {
+  const value = startOfDay(date);
+  value.setDate(value.getDate() + 1);
+  return value;
+};
+
+export const getDashboardSummary = asyncHandler(async (req, res) => {
+  const today = startOfDay();
+
+  // 1. Get all employees
+  const totalEmployees = await Employee.countDocuments();
+  
+  // 2. Get today's attendance
+  const todayAttendance = await Attendance.find({ date: today })
+    .populate('employeeId')
+    .lean();
+
+  const activeEmployeesToday = todayAttendance.filter(a => a.status !== 'absent' && a.status !== 'on_leave').length;
+  const loggedInCount = todayAttendance.filter(a => a.loginTime).length;
+  const loggedOutCount = todayAttendance.filter(a => a.logoutTime).length;
+  const absentCount = todayAttendance.filter(a => a.status === 'absent').length;
+
+  // 3. Get all projects
+  const totalProjects = await Project.countDocuments();
+  const activeProjects = await Project.countDocuments({ status: 'active' });
+
+  // 4. Get all tasks
+  const allTasks = await Task.find()
+    .populate('assignedTo')
+    .populate('projectId')
+    .lean();
+
+  const pendingTasks = allTasks.filter(t => !['completed', 'overdue'].includes(t.status)).length;
+  const completedTasks = allTasks.filter(t => t.status === 'completed').length;
+  const overdueTasks = allTasks.filter(t => t.status === 'overdue' || (t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed')).length;
+  const highPriorityTasks = allTasks.filter(t => t.priority === 'urgent' || t.priority === 'high').length;
+
+  // 5. Today's assigned tasks
+  const todayTasks = allTasks.filter(t => {
+    const createdDate = new Date(t.createdAt);
+    return createdDate >= today && createdDate < endOfDay();
+  });
+
+  // 6. Employees not logged in
+  const notLoggedInEmployees = await Employee.find()
+    .lean()
+    .then(employees => {
+      const loggedInIds = new Set(todayAttendance.map(a => a.employeeId._id?.toString()));
+      return employees.filter(e => !loggedInIds.has(e._id.toString()));
+    });
+
+  // 7. Tasks nearing deadline (next 3 days)
+  const threeDaysFromNow = new Date(today);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+  
+  const tasksNearingDeadline = allTasks.filter(t => {
+    if (!t.dueDate || t.status === 'completed') return false;
+    const dueDate = new Date(t.dueDate);
+    return dueDate >= today && dueDate <= threeDaysFromNow;
+  });
+
+  // 8. Pending leave requests
+  const pendingLeaveRequests = await LeaveRequest.find({ status: 'pending' })
+    .populate('employeeId')
+    .lean();
+
+  // 9. Incomplete daily updates
+  const incompleteUpdates = await DailyWorkUpdate.find({ date: today, status: 'draft' })
+    .populate('employeeId')
+    .lean();
+
+  // 10. Get projects with status overview
+  const projectsOverview = await Project.find()
+    .select('_id name projectCode status deadline priority assignedTo')
+    .populate('managerId', 'userId')
+    .lean()
+    .limit(10);
+
+  // Count tasks per project for overview
+  const projectsWithTaskCounts = await Promise.all(
+    projectsOverview.map(async (project) => {
+      const totalTasks = await Task.countDocuments({ projectId: project._id });
+      const completedTasks = await Task.countDocuments({ projectId: project._id, status: 'completed' });
+      const pendingTasks = totalTasks - completedTasks;
+      return {
+        ...project,
+        totalTasks,
+        completedTasks,
+        pendingTasks
+      };
+    })
+  );
+
+  // 11. Notifications
+  const allNotifications = await Notification.find()
+    .populate('userId')
+    .sort({ createdAt: -1 })
+    .lean()
+    .limit(10);
+
+  res.json({
+    summary: {
+      totalEmployees,
+      activeEmployeesToday,
+      loggedInCount,
+      loggedOutCount,
+      absentCount,
+      totalProjects,
+      activeProjects,
+      pendingTasks,
+      completedTasks,
+      overdueTasks,
+      highPriorityTasks,
+      todayTasksCount: todayTasks.length
+    },
+    attendance: {
+      today: todayAttendance.slice(0, 10),
+      notLoggedIn: notLoggedInEmployees.slice(0, 10)
+    },
+    projects: projectsWithTaskCounts,
+    tasks: {
+      today: todayTasks.slice(0, 10),
+      nearingDeadline: tasksNearingDeadline.slice(0, 10),
+      highPriority: allTasks.filter(t => (t.priority === 'urgent' || t.priority === 'high') && t.status !== 'completed').slice(0, 10)
+    },
+    alerts: {
+      notLoggedIn: notLoggedInEmployees.length,
+      tasksNearingDeadline: tasksNearingDeadline.length,
+      pendingLeaveRequests: pendingLeaveRequests.length,
+      incompleteUpdates: incompleteUpdates.length,
+      leaveRequests: pendingLeaveRequests.slice(0, 5),
+      incompleteUpdatesList: incompleteUpdates.slice(0, 5)
+    },
+    notifications: allNotifications
+  });
+});
+
+export const getAttendanceOverview = asyncHandler(async (req, res) => {
+  const today = startOfDay();
+  const attendance = await Attendance.find({ date: today })
+    .populate({
+      path: 'employeeId',
+      select: 'userId',
+      populate: {
+        path: 'userId',
+        select: 'name email'
+      }
+    })
+    .lean()
+    .limit(50);
+
+  const formattedAttendance = attendance.map(record => ({
+    _id: record._id,
+    employee: record.employeeId?.userId?.name || 'Unknown',
+    loginTime: record.loginTime ? new Date(record.loginTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+    logoutTime: record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
+    totalWorkingHours: (record.totalWorkingHours || 0).toFixed(2),
+    status: record.status
+  }));
+
+  res.json({
+    attendance: formattedAttendance,
+    total: attendance.length
+  });
+});
+
+export const getProjectOverview = asyncHandler(async (req, res) => {
+  const projects = await Project.find()
+    .populate('managerId', 'userId')
+    .lean()
+    .sort({ createdAt: -1 })
+    .limit(20);
+
+  const projectsWithDetails = await Promise.all(
+    projects.map(async (project) => {
+      const totalTasks = await Task.countDocuments({ projectId: project._id });
+      const completedTasks = await Task.countDocuments({ projectId: project._id, status: 'completed' });
+      const pendingTasks = totalTasks - completedTasks;
+      const assignedEmployees = await Task.distinct('assignedTo', { projectId: project._id });
+
+      return {
+        _id: project._id,
+        name: project.name,
+        projectCode: project.projectCode,
+        status: project.status,
+        priority: project.priority,
+        deadline: project.deadline ? new Date(project.deadline).toLocaleDateString() : 'No deadline',
+        assignedEmployeeCount: assignedEmployees.length,
+        totalTasks,
+        completedTasks,
+        pendingTasks,
+        progress: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+      };
+    })
+  );
+
+  res.json({
+    projects: projectsWithDetails,
+    total: projectsWithDetails.length
+  });
+});
+
+export const getTaskOverview = asyncHandler(async (req, res) => {
+  const today = startOfDay();
+
+  const todayTasks = await Task.find({
+    createdAt: { $gte: today, $lt: endOfDay() }
+  })
+    .populate('assignedTo', 'userId')
+    .populate('projectId', 'name')
+    .lean();
+
+  const allTasks = await Task.find()
+    .populate('assignedTo', 'userId')
+    .populate('projectId', 'name')
+    .lean();
+
+  const pendingTasks = allTasks.filter(t => !['completed', 'overdue'].includes(t.status));
+  const completedTasks = allTasks.filter(t => t.status === 'completed');
+  const overdueTasks = allTasks.filter(t => t.status === 'overdue' || (t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed'));
+  const highPriorityTasks = allTasks.filter(t => (t.priority === 'urgent' || t.priority === 'high') && t.status !== 'completed');
+
+  const formatTasks = (tasks) =>
+    tasks.slice(0, 10).map(t => ({
+      _id: t._id,
+      title: t.title,
+      taskCode: t.taskCode,
+      assignedTo: t.assignedTo?.userId?.name || 'Unassigned',
+      project: t.projectId?.name || 'No Project',
+      priority: t.priority,
+      status: t.status,
+      dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'No deadline'
+    }));
+
+  res.json({
+    today: formatTasks(todayTasks),
+    pending: formatTasks(pendingTasks),
+    completed: formatTasks(completedTasks),
+    overdue: formatTasks(overdueTasks),
+    highPriority: formatTasks(highPriorityTasks),
+    stats: {
+      todayCount: todayTasks.length,
+      pendingCount: pendingTasks.length,
+      completedCount: completedTasks.length,
+      overdueCount: overdueTasks.length,
+      highPriorityCount: highPriorityTasks.length
+    }
+  });
+});
+
+export const getAlerts = asyncHandler(async (req, res) => {
+  const today = startOfDay();
+
+  // Employees not logged in
+  const todayAttendance = await Attendance.find({ date: today }).select('employeeId').lean();
+  const loggedInIds = new Set(todayAttendance.map(a => a.employeeId?.toString()));
+  const notLoggedInEmployees = await Employee.find()
+    .select('_id userId')
+    .populate('userId', 'name email')
+    .lean()
+    .then(employees => employees.filter(e => !loggedInIds.has(e._id.toString())));
+
+  // Tasks nearing deadline
+  const threeDaysFromNow = new Date(today);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+  const tasksNearingDeadline = await Task.find({
+    dueDate: { $gte: today, $lte: threeDaysFromNow },
+    status: { $ne: 'completed' }
+  })
+    .populate('projectId', 'name')
+    .populate('assignedTo', 'userId')
+    .lean();
+
+  // Overdue projects
+  const overdueProjects = await Project.find({
+    deadline: { $lt: today },
+    status: { $ne: 'completed' }
+  })
+    .select('name projectCode deadline status')
+    .lean();
+
+  // Pending leave requests
+  const pendingLeaveRequests = await LeaveRequest.find({ status: 'pending' })
+    .populate('employeeId', 'userId')
+    .populate('employeeId.userId', 'name')
+    .lean();
+
+  // Incomplete daily updates
+  const incompleteUpdates = await DailyWorkUpdate.find({
+    date: today,
+    status: 'draft'
+  })
+    .populate('employeeId', 'userId')
+    .populate('employeeId.userId', 'name')
+    .lean();
+
+  res.json({
+    alerts: {
+      notLoggedIn: {
+        count: notLoggedInEmployees.length,
+        employees: notLoggedInEmployees.slice(0, 10).map(e => ({
+          _id: e._id,
+          name: e.userId?.name || 'Unknown',
+          email: e.userId?.email || 'N/A'
+        }))
+      },
+      tasksNearingDeadline: {
+        count: tasksNearingDeadline.length,
+        tasks: tasksNearingDeadline.slice(0, 10).map(t => ({
+          _id: t._id,
+          title: t.title,
+          taskCode: t.taskCode,
+          project: t.projectId?.name,
+          dueDate: new Date(t.dueDate).toLocaleDateString(),
+          assignedTo: t.assignedTo?.userId?.name
+        }))
+      },
+      overdueProjects: {
+        count: overdueProjects.length,
+        projects: overdueProjects.slice(0, 10).map(p => ({
+          _id: p._id,
+          name: p.name,
+          projectCode: p.projectCode,
+          deadline: new Date(p.deadline).toLocaleDateString()
+        }))
+      },
+      leaveRequests: {
+        count: pendingLeaveRequests.length,
+        requests: pendingLeaveRequests.slice(0, 10).map(lr => ({
+          _id: lr._id,
+          employee: lr.employeeId?.userId?.name,
+          fromDate: new Date(lr.fromDate).toLocaleDateString(),
+          toDate: new Date(lr.toDate).toLocaleDateString(),
+          leaveType: lr.leaveType
+        }))
+      },
+      incompleteUpdates: {
+        count: incompleteUpdates.length,
+        employees: incompleteUpdates.slice(0, 10).map(u => ({
+          _id: u._id,
+          employeeId: u.employeeId?._id,
+          employee: u.employeeId?.userId?.name,
+          date: new Date(u.date).toLocaleDateString()
+        }))
+      }
+    }
+  });
+});

@@ -3,10 +3,31 @@ import mongoose from 'mongoose';
 const taskSchema = new mongoose.Schema(
   {
     taskCode: { type: String, required: true, unique: true, trim: true },
-    projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
-    title: { type: String, required: true, trim: true },
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+      required() {
+        return this.status !== 'draft';
+      }
+    },
+    title: {
+      type: String,
+      trim: true,
+      required() {
+        return this.status !== 'draft';
+      }
+    },
     description: { type: String, default: '' },
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+    requirements: { type: String, default: '' },
+    expectedOutput: { type: String, default: '' },
+    notes: { type: String, default: '' },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Employee',
+      required() {
+        return this.status !== 'draft';
+      }
+    },
     assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     department: { type: String, default: '' },
     priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' },
@@ -15,7 +36,7 @@ const taskSchema = new mongoose.Schema(
     estimatedHours: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ['to_do', 'in_progress', 'under_review', 'completed', 'reopened', 'overdue'],
+      enum: ['draft', 'to_do', 'in_progress', 'under_review', 'completed', 'reopened', 'overdue'],
       default: 'to_do'
     },
     completedAt: Date,

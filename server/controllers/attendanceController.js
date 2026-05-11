@@ -23,7 +23,7 @@ export const attendanceLogin = asyncHandler(async (req, res) => {
 
   const settings = await Settings.findOne();
   const now = new Date();
-  const lateLimit = settings?.lateLoginLimit || employee.lateLoginRule || '09:45';
+  const lateLimit = settings?.attendanceSettings?.lateLoginLimit || settings?.lateLoginLimit || employee.lateLoginRule || '09:45';
   const [hour, minute] = lateLimit.split(':').map(Number);
   const lateDate = new Date(today);
   lateDate.setHours(hour, minute, 0, 0);
@@ -53,7 +53,7 @@ export const attendanceLogout = asyncHandler(async (req, res) => {
 
   const now = new Date();
   const settings = await Settings.findOne();
-  const earlyEndTime = settings?.workEndTime || employee.shiftEndTime || '18:30';
+  const earlyEndTime = settings?.attendanceSettings?.workEndTime || settings?.workEndTime || employee.shiftEndTime || '18:30';
   const [eh, em] = earlyEndTime.split(':').map(Number);
   const shiftEnd = new Date(dateOnly());
   shiftEnd.setHours(eh, em, 0, 0);

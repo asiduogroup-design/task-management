@@ -3,9 +3,11 @@ import Attendance from '../models/Attendance.js';
 import Employee from '../models/Employee.js';
 import Task from '../models/Task.js';
 import Project from '../models/Project.js';
+import ProjectMember from '../models/ProjectMember.js';
 import Notification from '../models/Notification.js';
 import LeaveRequest from '../models/LeaveRequest.js';
 import DailyWorkUpdate from '../models/DailyWorkUpdate.js';
+import Todo from '../models/Todo.js';
 import { dateOnly } from '../utils/calculateHours.js';
 
 const startOfDay = (date = new Date()) => {
@@ -359,6 +361,124 @@ export const getAlerts = asyncHandler(async (req, res) => {
           date: new Date(u.date).toLocaleDateString()
         }))
       }
+    }
+  });
+});
+
+export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
+  if (!req.employee) {
+    res.status(400);
+    throw new Error('Employee profile required');
+  }
+
+  const today = dateOnly(new Date());
+  const nextDay = new Date(today);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  const [attendance, tasks, projectMembers, todos, dailyUpdate, notifications] = await Promise.all([
+    Attendance.findOne({ employeeId: req.employee._id, date: today }),
+    Task.find({ assignedTo: req.employee._id })
+      .populate('projectId', 'name deadline')
+      .sort({ dueDate: 1, createdAt: -1 })
+      .lean(),
+    ProjectMember.find({ employeeId: req.employee._id }).populate('projectId', 'name deadline status').lean(),
+    Todo.find({ employeeId: req.employee._id })
+      .populate('projectId', 'name')
+      .populate('taskId', 'title')
+      .sort({ dueDate: 1, createdAt: -1 })
+      .lean(),
+    DailyWorkUpdate.findOne({ employeeId: req.employee._id, date: { $gte: today, $lt: nextDay } })
+      .populate('projectId', 'name')
+      .populate('taskId', 'title')
+      .lean(),
+    Notification.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(20).lean()
+  ]);
+
+  const projectIds = [...new Set(projectMembers.map((member) => member.projectId?._id).filter(Boolean).map((id) => String(id)))];
+  const projectTaskStats = await Promise.all(
+    projectIds.map(async (projectId) => {
+      const [totalTasks, completedTasks] = await Promise.all([
+        Task.countDocuments({ projectId }),
+        Task.countDocuments({ projectId, status: 'completed' })
+      ]);
+      return { projectId: String(projectId), totalTasks, completedTasks };
+    })
+  );
+
+  const projectStatsById = new Map(
+    projectTaskStats.map((stat) => [stat.projectId, stat])
+  );
+
+  const assignedProjects = projectMembers
+    .map((member) => {
+      const project = member.projectId;
+      if (!project?._id) return null;
+
+      const stats = projectStatsById.get(String(project._id)) || { totalTasks: 0, completedTasks: 0 };
+      const progress = stats.totalTasks ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
+
+      return {
+        _id: project._id,
+        name: project.name,
+        role: member.role || 'member',
+        deadline: project.deadline,
+        status: project.status,
+        progress,
+        totalTasks: stats.totalTasks,
+        completedTasks: stats.completedTasks
+      };
+    })
+    .filter(Boolean);
+
+  const taskItems = tasks.slice(0, 20).map((task) => ({
+    _id: task._id,
+    title: task.title,
+    projectName: task.projectId?.name || 'No project',
+    priority: task.priority,
+    deadline: task.dueDate,
+    status: task.status
+  }));
+
+  const todoGroups = {
+    personal: todos.filter((todo) => !todo.projectId && !todo.taskId),
+    project: todos.filter((todo) => todo.projectId && !todo.taskId),
+    task: todos.filter((todo) => todo.taskId)
+  };
+
+  const categorizedNotifications = {
+    newTaskAssigned: notifications.filter((item) => item.type === 'task').slice(0, 10),
+    deadlineReminder: notifications
+      .filter((item) => item.subtype?.includes('deadline') || item.message?.toLowerCase().includes('due'))
+      .slice(0, 10),
+    adminComments: notifications
+      .filter((item) => ['system', 'leave', 'daily_update'].includes(item.type))
+      .slice(0, 10),
+    projectUpdates: notifications.filter((item) => item.type === 'project').slice(0, 10)
+  };
+
+  res.json({
+    welcome: {
+      employeeName: req.user.name,
+      currentDate: today,
+      currentStatus: attendance?.status || 'not_logged_in'
+    },
+    loginLogout: {
+      status: attendance?.status || 'not_logged_in',
+      loginTime: attendance?.loginTime || null,
+      logoutTime: attendance?.logoutTime || null,
+      totalWorkingHours: attendance?.totalWorkingHours || 0,
+      totalBreakMinutes: attendance?.totalBreakMinutes || 0
+    },
+    todayTasks: taskItems,
+    assignedProjects,
+    todos: {
+      all: todos,
+      ...todoGroups
+    },
+    todayWorkUpdate: dailyUpdate || null,
+    notifications: {
+      all: notifications,
+      ...categorizedNotifications
     }
   });
 });

@@ -4,7 +4,8 @@ import {
   getAttendanceOverview,
   getProjectOverview,
   getTaskOverview,
-  getAlerts
+  getAlerts,
+  getEmployeeDashboardOverview
 } from '../controllers/dashboardController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { adminRoles, authorize } from '../middleware/roleMiddleware.js';
@@ -12,12 +13,12 @@ import { adminRoles, authorize } from '../middleware/roleMiddleware.js';
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize(...adminRoles));
 
-router.get('/summary', getDashboardSummary);
-router.get('/attendance', getAttendanceOverview);
-router.get('/projects', getProjectOverview);
-router.get('/tasks', getTaskOverview);
-router.get('/alerts', getAlerts);
+router.get('/employee-overview', getEmployeeDashboardOverview);
+router.get('/summary', authorize(...adminRoles), getDashboardSummary);
+router.get('/attendance', authorize(...adminRoles), getAttendanceOverview);
+router.get('/projects', authorize(...adminRoles), getProjectOverview);
+router.get('/tasks', authorize(...adminRoles), getTaskOverview);
+router.get('/alerts', authorize(...adminRoles), getAlerts);
 
 export default router;

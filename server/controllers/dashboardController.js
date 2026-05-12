@@ -1,4 +1,5 @@
 import asyncHandler from 'express-async-handler';
+import mongoose from 'mongoose';
 import Attendance from '../models/Attendance.js';
 import Employee from '../models/Employee.js';
 import Task from '../models/Task.js';
@@ -20,6 +21,43 @@ const endOfDay = (date = new Date()) => {
   const value = startOfDay(date);
   value.setDate(value.getDate() + 1);
   return value;
+};
+
+const projectStatusGroup = (project) => {
+  const today = startOfDay();
+  const deadline = project.deadline ? new Date(project.deadline) : null;
+  const isOverdue = Boolean(deadline && deadline < today && !['completed', 'cancelled', 'archived'].includes(project.status));
+
+  if (isOverdue) return 'overdue';
+  if (project.status === 'on_hold') return 'on_hold';
+  if (['planning', 'not_started', 'active'].includes(project.status)) return 'active';
+  return project.status || 'active';
+};
+
+const buildEmployeeProjectCard = (member, stats = { totalTasks: 0, completedTasks: 0 }) => {
+  const project = member.projectId;
+  if (!project?._id) return null;
+
+  const progressPercentage = stats.totalTasks ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
+
+  return {
+    _id: project._id,
+    projectCode: project.projectCode,
+    name: project.name,
+    description: project.description || project.requirements || '',
+    startDate: project.startDate,
+    deadline: project.deadline,
+    department: project.department,
+    role: member.role || 'member',
+    status: projectStatusGroup(project),
+    actualStatus: project.status,
+    assignedDate: member.assignedDate || member.createdAt,
+    progressPercentage,
+    taskSummary: {
+      total: stats.totalTasks || 0,
+      completed: stats.completedTasks || 0
+    }
+  };
 };
 
 export const getDashboardSummary = asyncHandler(async (req, res) => {
@@ -215,6 +253,53 @@ export const getProjectOverview = asyncHandler(async (req, res) => {
   res.json({
     projects: projectsWithDetails,
     total: projectsWithDetails.length
+  });
+});
+
+export const getEmployeeProjects = asyncHandler(async (req, res) => {
+  if (!req.employee) {
+    res.status(400);
+    throw new Error('Employee profile required');
+  }
+
+  const { status } = req.query;
+  const projectMembers = await ProjectMember.find({ employeeId: req.employee._id })
+    .populate('projectId', 'projectCode name description requirements startDate deadline department status')
+    .lean();
+
+  const projectIds = [...new Set(projectMembers.map((member) => member.projectId?._id).filter(Boolean).map((projectId) => String(projectId)))];
+  const taskStats = projectIds.length
+    ? await Task.aggregate([
+        { $match: { projectId: { $in: projectIds.map((projectId) => new mongoose.Types.ObjectId(projectId)) } } },
+        {
+          $group: {
+            _id: '$projectId',
+            totalTasks: { $sum: 1 },
+            completedTasks: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
+          }
+        }
+      ])
+    : [];
+
+  const statsByProject = new Map(taskStats.map((item) => [String(item._id), item]));
+  const projects = projectMembers
+    .map((member) => buildEmployeeProjectCard(member, statsByProject.get(String(member.projectId?._id)) || { totalTasks: 0, completedTasks: 0 }))
+    .filter(Boolean)
+    .sort((left, right) => new Date(left.deadline || left.startDate || 0) - new Date(right.deadline || right.startDate || 0));
+
+  const summary = projects.reduce((accumulator, project) => {
+    accumulator.total += 1;
+    accumulator[project.status] = (accumulator[project.status] || 0) + 1;
+    return accumulator;
+  }, { total: 0, active: 0, completed: 0, overdue: 0, on_hold: 0 });
+
+  const filteredProjects = status && status !== 'all'
+    ? projects.filter((project) => project.status === status)
+    : projects;
+
+  res.json({
+    projects: filteredProjects,
+    summary
   });
 });
 

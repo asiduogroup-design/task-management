@@ -211,7 +211,27 @@ export const getProjectById = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Project not found');
   }
-  const members = await ProjectMember.find({ projectId: project._id }).populate({ path: 'employeeId', populate: { path: 'userId', select: 'name email' } });
+
+  if ([ROLES.MANAGER, ROLES.EMPLOYEE].includes(req.user.role)) {
+    if (!req.employee) {
+      res.status(403);
+      throw new Error('Forbidden: employee profile required');
+    }
+
+    const projectMember = await ProjectMember.findOne({ projectId: project._id, employeeId: req.employee._id });
+    const isProjectManager = project.managerId?._id && String(project.managerId._id) === String(req.employee._id);
+
+    if (!projectMember && !isProjectManager) {
+      res.status(403);
+      throw new Error('Forbidden: project access denied');
+    }
+  }
+
+  const members = await ProjectMember.find({ projectId: project._id }).populate({
+    path: 'employeeId',
+    select: 'employeeCode phone email designation',
+    populate: { path: 'userId', select: 'name email' }
+  });
   const milestones = await Milestone.find({ projectId: project._id }).populate({ path: 'responsibleEmployeeId', populate: { path: 'userId', select: 'name email' } });
   const tasks = await Task.find({ projectId: project._id })
     .populate({ path: 'assignedTo', populate: { path: 'userId', select: 'name email' } })
@@ -285,13 +305,51 @@ export const getProjectById = asyncHandler(async (req, res) => {
     };
   });
 
+  const myTasks = req.employee
+    ? tasks
+      .filter((task) => String(task.assignedTo?._id) === String(req.employee._id))
+      .map((task) => ({
+        _id: task._id,
+        title: task.title,
+        priority: task.priority,
+        startDate: task.startDate,
+        dueDate: task.dueDate,
+        status: task.status
+      }))
+    : [];
+
+  const teamMembers = members.map((member) => ({
+    _id: member.employeeId?._id,
+    name: member.employeeId?.userId?.name || member.employeeId?.employeeCode || '-',
+    role: member.role || 'member',
+    contact: {
+      email: member.employeeId?.email || member.employeeId?.userId?.email || '-',
+      phone: member.employeeId?.phone || '-'
+    }
+  }));
+
+  const timeline = {
+    startDate: project.startDate || null,
+    deadline: project.deadline || null,
+    milestones: milestonesWithProgress.map((milestone) => ({
+      _id: milestone._id,
+      title: milestone.title,
+      dueDate: milestone.dueDate,
+      status: milestone.status,
+      completionPercentage: milestone.completionPercentage
+    }))
+  };
+
   res.json({
     project,
     members,
     assignedEmployees,
+    teamMembers,
     milestones: milestonesWithProgress,
     tasks,
+    myTasks,
     taskBoard: taskColumns,
+    timeline,
     progress: {
       totalTasks,
       completedTasks,

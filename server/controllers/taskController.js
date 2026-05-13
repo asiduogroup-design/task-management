@@ -492,6 +492,7 @@ export const addTaskWorkLog = asyncHandler(async (req, res) => {
     employeeId: req.employee._id,
     projectId: task.projectId,
     taskId: task._id,
+    reportType: 'task_log',
     date,
     timeSpent: Number(req.body.timeSpent || 0),
     workDescription: String(req.body.workCompleted || req.body.workDescription || '').trim(),

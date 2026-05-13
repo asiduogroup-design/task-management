@@ -17,7 +17,7 @@ const dailyWorkUpdateSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-dailyWorkUpdateSchema.index({ employeeId: 1, date: 1 }, { unique: true });
+dailyWorkUpdateSchema.index({ employeeId: 1, date: 1, taskId: 1 }, { unique: true });
 
 const DailyWorkUpdate = mongoose.model('DailyWorkUpdate', dailyWorkUpdateSchema);
 

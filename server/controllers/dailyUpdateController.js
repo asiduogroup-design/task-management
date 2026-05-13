@@ -15,7 +15,8 @@ export const createDailyUpdate = asyncHandler(async (req, res) => {
     throw new Error('Employee profile required');
   }
   const date = dateOnly(req.body.date || new Date());
-  const exists = await DailyWorkUpdate.findOne({ employeeId: req.employee._id, date });
+  const taskId = req.body.taskId || null;
+  const exists = await DailyWorkUpdate.findOne({ employeeId: req.employee._id, date, taskId });
   if (exists) {
     res.status(409);
     throw new Error('Daily update already submitted for this date');

@@ -12,5 +12,8 @@ export const taskService = {
   changeDeadline: (id, dueDate) => api.patch(`/tasks/${id}/deadline`, { dueDate }),
   markCompleted: (id) => api.patch(`/tasks/${id}/complete`),
   reopen: (id) => api.patch(`/tasks/${id}/reopen`),
-  comment: (id, comment) => api.post(`/tasks/${id}/comments`, { comment })
+  comment: (id, comment) => api.post(`/tasks/${id}/comments`, { comment }),
+  attachment: (id, payload) => api.post(`/tasks/${id}/attachments`, payload),
+  workLog: (id, payload) => api.post(`/tasks/${id}/work-logs`, payload),
+  subtaskStatus: (taskId, subtaskId, status) => api.patch(`/tasks/${taskId}/subtasks/${subtaskId}/status`, { status })
 };

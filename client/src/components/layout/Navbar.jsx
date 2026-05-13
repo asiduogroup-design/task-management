@@ -24,7 +24,7 @@ const Navbar = ({ onMenu }) => {
       <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-6">
         <div className="flex items-center gap-3">
           <button className="btn-secondary md:hidden" type="button" onClick={onMenu}>Menu</button>
-          <input className="form-field hidden w-80 md:block" placeholder="Search workspace..." />
+          <input className="form-field hidden w-80 md:block" id="workspace-navbar-search" name="workspaceNavbarSearch" placeholder="Search workspace..." />
         </div>
         <div className="flex items-center gap-4">
           <Link className="relative rounded-md border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700" to={notificationsPath}>

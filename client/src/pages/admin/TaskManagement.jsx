@@ -183,26 +183,26 @@ const TaskManagement = () => {
 			</div>
 
 			<SearchFilterBar search={search} setSearch={setSearch}>
-				<select className="form-field md:max-w-xs" value={filters.employeeId} onChange={(event) => setFilter('employeeId', event.target.value)}>
+				<select className="form-field md:max-w-xs" id="taskFilterEmployee" name="employeeId" value={filters.employeeId} onChange={(event) => setFilter('employeeId', event.target.value)}>
 					<option value="">All employees</option>
 					{employees.map((employee) => (
 						<option key={employee._id} value={employee._id}>{employee.userId?.name || employee.employeeCode}</option>
 					))}
 				</select>
-				<select className="form-field md:max-w-xs" value={filters.projectId} onChange={(event) => setFilter('projectId', event.target.value)}>
+				<select className="form-field md:max-w-xs" id="taskFilterProject" name="projectId" value={filters.projectId} onChange={(event) => setFilter('projectId', event.target.value)}>
 					<option value="">All projects</option>
 					{projects.map((project) => (
 						<option key={project._id} value={project._id}>{project.name || project.projectCode}</option>
 					))}
 				</select>
-				<select className="form-field md:max-w-xs" value={filters.priority} onChange={(event) => setFilter('priority', event.target.value)}>
+				<select className="form-field md:max-w-xs" id="taskFilterPriority" name="priority" value={filters.priority} onChange={(event) => setFilter('priority', event.target.value)}>
 					<option value="">All priorities</option>
 					<option value="low">Low</option>
 					<option value="medium">Medium</option>
 					<option value="high">High</option>
 					<option value="urgent">Urgent</option>
 				</select>
-				<select className="form-field md:max-w-xs" value={filters.status} onChange={(event) => setFilter('status', event.target.value)}>
+				<select className="form-field md:max-w-xs" id="taskFilterStatus" name="status" value={filters.status} onChange={(event) => setFilter('status', event.target.value)}>
 					<option value="">All statuses</option>
 					<option value="draft">Draft</option>
 					<option value="to_do">Not started</option>
@@ -212,7 +212,7 @@ const TaskManagement = () => {
 					<option value="reopened">Reopened</option>
 					<option value="overdue">Overdue</option>
 				</select>
-				<select className="form-field md:max-w-xs" value={filters.deadlineFilter} onChange={(event) => setFilter('deadlineFilter', event.target.value)}>
+				<select className="form-field md:max-w-xs" id="taskFilterDeadline" name="deadlineFilter" value={filters.deadlineFilter} onChange={(event) => setFilter('deadlineFilter', event.target.value)}>
 					<option value="">All deadlines</option>
 					<option value="today">Due today</option>
 					<option value="this_week">Due this week</option>
@@ -262,7 +262,7 @@ const TaskManagement = () => {
 						{actionModal.type === 'reassign' && (
 							<label className="block">
 								<span className="mb-1 block text-sm font-bold text-slate-700">Assigned employee</span>
-								<select className="form-field" value={actionValue} onChange={(event) => setActionValue(event.target.value)} required>
+								<select className="form-field" id={`taskAction-${actionModal.type}-employee`} name="employeeId" value={actionValue} onChange={(event) => setActionValue(event.target.value)} required>
 									<option value="">Select employee</option>
 									{employees.map((employee) => (
 										<option key={employee._id} value={employee._id}>{employee.userId?.name || employee.employeeCode}</option>
@@ -274,7 +274,7 @@ const TaskManagement = () => {
 						{actionModal.type === 'deadline' && (
 							<label className="block">
 								<span className="mb-1 block text-sm font-bold text-slate-700">New due date</span>
-								<input className="form-field" type="date" value={actionValue} onChange={(event) => setActionValue(event.target.value)} required />
+								<input className="form-field" id="taskActionDeadline" name="dueDate" type="date" value={actionValue} onChange={(event) => setActionValue(event.target.value)} required />
 							</label>
 						)}
 

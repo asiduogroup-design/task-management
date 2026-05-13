@@ -41,6 +41,13 @@ const normalizeAttachments = (attachments = []) =>
       fileUrl: String(attachment.fileUrl).trim()
     }));
 
+const userTaskPermissions = (task, req) => {
+  const isApprover = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER].includes(req.user.role);
+  const assignedToId = task?.assignedTo?._id || task?.assignedTo;
+  const isAssignee = String(assignedToId || '') === String(req.employee?._id || '');
+  return { isApprover, isAssignee };
+};
+
 export const getTasks = asyncHandler(async (req, res) => {
   const { search, status, employeeId, projectId, priority, deadlineFilter } = req.query;
   const query = taskQueryForUser(req);
@@ -182,6 +189,13 @@ export const getTaskById = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Task not found');
   }
+
+  const { isApprover, isAssignee } = userTaskPermissions(task, req);
+  if (!isApprover && !isAssignee) {
+    res.status(403);
+    throw new Error('You cannot view this task');
+  }
+
   const comments = await TaskComment.find({ taskId: task._id }).populate('userId', 'name role');
   const subtasks = await Subtask.find({ taskId: task._id })
     .populate({ path: 'assignedTo', select: 'employeeCode', populate: { path: 'userId', select: 'name email' } })
@@ -191,7 +205,7 @@ export const getTaskById = asyncHandler(async (req, res) => {
     .populate({ path: 'employeeId', select: 'employeeCode department designation', populate: { path: 'userId', select: 'name email' } })
     .sort({ date: -1, createdAt: -1 });
 
-  const attachments = await TaskAttachment.find({ taskId: task._id }).sort({ createdAt: 1 });
+  const attachments = await TaskAttachment.find({ taskId: task._id }).populate('uploadedBy', 'name role').sort({ createdAt: 1 });
   res.json({ task, comments, subtasks, workLogs, attachments });
 });
 
@@ -255,15 +269,28 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
   const isAssignee = task.assignedTo.toString() === req.employee?._id?.toString();
   const isApprover = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER].includes(req.user.role);
   const nextStatus = req.body.status;
+  const validStatuses = ['to_do', 'in_progress', 'under_review', 'completed', 'reopened'];
+
+  if (!validStatuses.includes(nextStatus)) {
+    res.status(400);
+    throw new Error('Invalid task status');
+  }
 
   if (!isAssignee && !isApprover) {
     res.status(403);
     throw new Error('You cannot update this task');
   }
 
-  if (isAssignee && !['in_progress', 'under_review'].includes(nextStatus) && !isApprover) {
-    res.status(403);
-    throw new Error('Employees can start tasks or submit them for review');
+  if (isAssignee && !isApprover) {
+    const canStartTask = nextStatus === 'in_progress' && ['to_do', 'reopened'].includes(task.status);
+    const canSubmitForReview = nextStatus === 'under_review' && task.status === 'in_progress';
+    const canMarkCompleted = nextStatus === 'completed' && task.status === 'under_review';
+    const canReopenTask = nextStatus === 'reopened' && task.status === 'completed';
+
+    if (!canStartTask && !canSubmitForReview && !canMarkCompleted && !canReopenTask) {
+      res.status(403);
+      throw new Error('Employees can start tasks, submit for review, mark completed after review, and reopen completed tasks');
+    }
   }
 
   task.status = nextStatus;
@@ -361,11 +388,118 @@ export const reopenTask = asyncHandler(async (req, res) => {
 });
 
 export const addTaskComment = asyncHandler(async (req, res) => {
+  const task = await Task.findById(req.params.id);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  const { isApprover, isAssignee } = userTaskPermissions(task, req);
+  if (!isApprover && !isAssignee) {
+    res.status(403);
+    throw new Error('You cannot comment on this task');
+  }
+
+  if (!String(req.body.comment || '').trim()) {
+    res.status(400);
+    throw new Error('Comment is required');
+  }
+
   const comment = await TaskComment.create({ taskId: req.params.id, userId: req.user._id, comment: req.body.comment });
   res.status(201).json({ comment });
 });
 
 export const addTaskAttachment = asyncHandler(async (req, res) => {
+  const task = await Task.findById(req.params.id);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  const { isApprover, isAssignee } = userTaskPermissions(task, req);
+  if (!isApprover && !isAssignee) {
+    res.status(403);
+    throw new Error('You cannot add attachments to this task');
+  }
+
+  if (!String(req.body.fileName || '').trim() || !String(req.body.fileUrl || '').trim()) {
+    res.status(400);
+    throw new Error('Attachment file name and URL are required');
+  }
+
   const attachment = await TaskAttachment.create({ ...req.body, taskId: req.params.id, uploadedBy: req.user._id });
   res.status(201).json({ attachment });
+});
+
+export const updateSubtaskStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const validStatuses = ['pending', 'in_progress', 'completed'];
+  if (!validStatuses.includes(status)) {
+    res.status(400);
+    throw new Error('Invalid subtask status');
+  }
+
+  const task = await Task.findById(req.params.id);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  const { isApprover, isAssignee } = userTaskPermissions(task, req);
+  if (!isApprover && !isAssignee) {
+    res.status(403);
+    throw new Error('You cannot update subtasks for this task');
+  }
+
+  const subtask = await Subtask.findOne({ _id: req.params.subtaskId, taskId: req.params.id });
+  if (!subtask) {
+    res.status(404);
+    throw new Error('Subtask not found');
+  }
+
+  subtask.status = status;
+  subtask.completedAt = status === 'completed' ? new Date() : undefined;
+  await subtask.save();
+
+  res.json({ subtask });
+});
+
+export const addTaskWorkLog = asyncHandler(async (req, res) => {
+  const task = await Task.findById(req.params.id);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  const { isApprover, isAssignee } = userTaskPermissions(task, req);
+  if (!isApprover && !isAssignee) {
+    res.status(403);
+    throw new Error('You cannot log work for this task');
+  }
+
+  if (!req.employee) {
+    res.status(400);
+    throw new Error('Employee profile required');
+  }
+
+  if (!String(req.body.workCompleted || req.body.workDescription || '').trim()) {
+    res.status(400);
+    throw new Error('Work completed is required');
+  }
+
+  const date = req.body.date ? new Date(req.body.date) : new Date();
+  const workLog = await DailyWorkUpdate.create({
+    employeeId: req.employee._id,
+    projectId: task.projectId,
+    taskId: task._id,
+    date,
+    timeSpent: Number(req.body.timeSpent || 0),
+    workDescription: String(req.body.workCompleted || req.body.workDescription || '').trim(),
+    completedWork: String(req.body.workCompleted || '').trim(),
+    pendingWork: String(req.body.pendingWork || '').trim(),
+    blockers: String(req.body.blockers || '').trim(),
+    status: 'submitted'
+  });
+
+  res.status(201).json({ workLog });
 });

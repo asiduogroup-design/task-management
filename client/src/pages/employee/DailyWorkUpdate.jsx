@@ -110,6 +110,7 @@ const DailyWorkUpdate = () => {
                 className="mt-1 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand"
                 disabled={loading}
                 id="projectId"
+                name="projectId"
                 onChange={(event) => setForm((current) => ({ ...current, projectId: event.target.value }))}
                 value={form.projectId}
               >
@@ -128,6 +129,7 @@ const DailyWorkUpdate = () => {
                 <textarea
                   className="mt-1 min-h-32 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand"
                   id="workDescription"
+                  name="workDescription"
                   onChange={(event) => setForm((current) => ({ ...current, workDescription: event.target.value }))}
                   placeholder="Summarize the work completed today"
                   required
@@ -139,6 +141,7 @@ const DailyWorkUpdate = () => {
                 <textarea
                   className="mt-1 min-h-32 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand"
                   id="completedWork"
+                  name="completedWork"
                   onChange={(event) => setForm((current) => ({ ...current, completedWork: event.target.value }))}
                   placeholder="List deliverables or milestones completed"
                   value={form.completedWork}
@@ -152,6 +155,7 @@ const DailyWorkUpdate = () => {
                 <input
                   className="mt-1 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand"
                   id="timeSpent"
+                  name="timeSpent"
                   min="0"
                   onChange={(event) => setForm((current) => ({ ...current, timeSpent: event.target.value }))}
                   placeholder="0"
@@ -165,6 +169,7 @@ const DailyWorkUpdate = () => {
                 <textarea
                   className="mt-1 min-h-28 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand"
                   id="blockers"
+                  name="blockers"
                   onChange={(event) => setForm((current) => ({ ...current, blockers: event.target.value }))}
                   placeholder="Mention anything slowing you down"
                   value={form.blockers}
@@ -175,6 +180,7 @@ const DailyWorkUpdate = () => {
                 <textarea
                   className="mt-1 min-h-28 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand"
                   id="tomorrowPlan"
+                  name="tomorrowPlan"
                   onChange={(event) => setForm((current) => ({ ...current, tomorrowPlan: event.target.value }))}
                   placeholder="What will you tackle next?"
                   value={form.tomorrowPlan}

@@ -351,8 +351,8 @@ const EmployeeDashboard = () => {
         <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
           <h3 className="text-lg font-bold text-ink">Todo List</h3>
           <form className="mt-3 space-y-2" onSubmit={addTodo}>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setTodoTitle(event.target.value)} placeholder="Add new todo" value={todoTitle} />
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setTodoDescription(event.target.value)} placeholder="Description (optional)" value={todoDescription} />
+            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="todoTitle" name="todoTitle" onChange={(event) => setTodoTitle(event.target.value)} placeholder="Add new todo" value={todoTitle} />
+            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="todoDescription" name="todoDescription" onChange={(event) => setTodoDescription(event.target.value)} placeholder="Description (optional)" value={todoDescription} />
             <button className="btn-primary" disabled={actionBusy === 'addTodo'} type="submit">Add new todo</button>
           </form>
 
@@ -396,19 +396,19 @@ const EmployeeDashboard = () => {
           <form className="mt-4 space-y-3" onSubmit={submitDailyUpdate}>
             <div>
               <label className="text-sm font-semibold text-slate-700">What did you work on today?</label>
-              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setDailyForm((prev) => ({ ...prev, workDescription: event.target.value }))} rows={3} value={dailyForm.workDescription} />
+              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyWorkDescription" name="workDescription" onChange={(event) => setDailyForm((prev) => ({ ...prev, workDescription: event.target.value }))} rows={3} value={dailyForm.workDescription} />
             </div>
             <div>
               <label className="text-sm font-semibold text-slate-700">Time spent (hours)</label>
-              <input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" min="0" onChange={(event) => setDailyForm((prev) => ({ ...prev, timeSpent: event.target.value }))} step="0.5" type="number" value={dailyForm.timeSpent} />
+              <input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyTimeSpent" name="timeSpent" min="0" onChange={(event) => setDailyForm((prev) => ({ ...prev, timeSpent: event.target.value }))} step="0.5" type="number" value={dailyForm.timeSpent} />
             </div>
             <div>
               <label className="text-sm font-semibold text-slate-700">Issues/blockers</label>
-              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setDailyForm((prev) => ({ ...prev, blockers: event.target.value }))} rows={2} value={dailyForm.blockers} />
+              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyBlockers" name="blockers" onChange={(event) => setDailyForm((prev) => ({ ...prev, blockers: event.target.value }))} rows={2} value={dailyForm.blockers} />
             </div>
             <div>
               <label className="text-sm font-semibold text-slate-700">Tomorrow's plan</label>
-              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" onChange={(event) => setDailyForm((prev) => ({ ...prev, tomorrowPlan: event.target.value }))} rows={2} value={dailyForm.tomorrowPlan} />
+              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyTomorrowPlan" name="tomorrowPlan" onChange={(event) => setDailyForm((prev) => ({ ...prev, tomorrowPlan: event.target.value }))} rows={2} value={dailyForm.tomorrowPlan} />
             </div>
             <button className="btn-primary" disabled={actionBusy === 'dailyUpdate'} type="submit">Submit daily update</button>
           </form>

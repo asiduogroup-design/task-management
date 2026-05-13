@@ -22,6 +22,7 @@ import EmployeeDashboard from '../pages/employee/EmployeeDashboard.jsx';
 import MyAttendance from '../pages/employee/MyAttendance.jsx';
 import MyProjects from '../pages/employee/MyProjects.jsx';
 import MyTasks from '../pages/employee/MyTasks.jsx';
+import EmployeeTaskDetails from '../pages/employee/EmployeeTaskDetails.jsx';
 import TodoList from '../pages/employee/TodoList.jsx';
 import DailyWorkUpdate from '../pages/employee/DailyWorkUpdate.jsx';
 import CompletedTasks from '../pages/employee/CompletedTasks.jsx';
@@ -75,7 +76,7 @@ const AppRoutes = () => (
     <Route path="/employee/projects" element={<RoleBasedRoute roles={['employee']}><MyProjects /></RoleBasedRoute>} />
     <Route path="/employee/projects/:id" element={<RoleBasedRoute roles={['employee']}><ProjectDetails employeeView /></RoleBasedRoute>} />
     <Route path="/employee/tasks" element={<RoleBasedRoute roles={['employee']}><MyTasks /></RoleBasedRoute>} />
-    <Route path="/employee/tasks/:id" element={<RoleBasedRoute roles={['employee']}><TaskDetails employeeView /></RoleBasedRoute>} />
+    <Route path="/employee/tasks/:id" element={<RoleBasedRoute roles={['employee']}><EmployeeTaskDetails /></RoleBasedRoute>} />
     <Route path="/employee/todos" element={<RoleBasedRoute roles={['employee']}><TodoList /></RoleBasedRoute>} />
     <Route path="/employee/daily-update" element={<RoleBasedRoute roles={['employee']}><DailyWorkUpdate /></RoleBasedRoute>} />
     <Route path="/employee/completed-tasks" element={<RoleBasedRoute roles={['employee']}><CompletedTasks /></RoleBasedRoute>} />

@@ -347,7 +347,7 @@ const TaskDetails = ({ employeeView = false }) => {
               <form className="mt-4 flex flex-col gap-3" onSubmit={addComment}>
                 <label className="block">
                   <span className="mb-1 block text-sm font-bold text-slate-700">Add comment</span>
-                  <textarea className="form-field min-h-20" onChange={(event) => setCommentText(event.target.value)} value={commentText} />
+                  <textarea className="form-field min-h-20" id="taskAdminComment" name="comment" onChange={(event) => setCommentText(event.target.value)} value={commentText} />
                 </label>
                 <div>
                   <button className="btn-primary" disabled={saving || !commentText.trim()} type="submit">Post comment</button>
@@ -365,7 +365,7 @@ const TaskDetails = ({ employeeView = false }) => {
                 <div className="flex items-end gap-2">
                   <label className="block">
                     <span className="mb-1 block text-sm font-bold text-slate-700">Reassign task</span>
-                    <select className="form-field" onChange={(event) => setActionForm((current) => ({ ...current, employeeId: event.target.value }))} value={actionForm.employeeId}>
+                    <select className="form-field" id="taskReassignEmployee" name="employeeId" onChange={(event) => setActionForm((current) => ({ ...current, employeeId: event.target.value }))} value={actionForm.employeeId}>
                       <option value="">Select employee</option>
                       {employees.map((employee) => (
                         <option key={employee._id} value={employee._id}>{employee.userId?.name || employee.employeeCode}</option>
@@ -378,7 +378,7 @@ const TaskDetails = ({ employeeView = false }) => {
                 <div className="flex items-end gap-2">
                   <label className="block">
                     <span className="mb-1 block text-sm font-bold text-slate-700">Extend deadline</span>
-                    <input className="form-field" onChange={(event) => setActionForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={actionForm.dueDate} />
+                    <input className="form-field" id="taskExtendDueDate" name="dueDate" onChange={(event) => setActionForm((current) => ({ ...current, dueDate: event.target.value }))} type="date" value={actionForm.dueDate} />
                   </label>
                   <button className="btn-secondary" disabled={saving || !actionForm.dueDate} onClick={extendDeadline} type="button">Extend</button>
                 </div>

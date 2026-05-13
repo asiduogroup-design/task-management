@@ -18,11 +18,11 @@ import {
 	updateTaskStatus
 } from '../controllers/taskController.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { authorize, managerRoles } from '../middleware/roleMiddleware.js';
+import { authorize, managerRoles, ROLES } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, authorize(ROLES.SUPER_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE));
 router.get('/summary', getTaskSummary);
 router.get('/completed-history', getCompletedTaskHistory);
 router.route('/').get(getTasks).post(authorize(...managerRoles), createTask);

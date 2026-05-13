@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import FormInput from '../../components/common/FormInput.jsx';
 import ModulePage from '../shared/ModulePage.jsx';
 import { employeeService } from '../../services/employeeService.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const initialForm = {
   photoUrl: '',
@@ -40,12 +41,14 @@ const Section = ({ title, children }) => (
 );
 
 const EmployeeForm = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [employees, setEmployees] = useState([]);
   const [error, setError] = useState('');
+  const canAssignAdminRole = user?.role === 'super_admin';
 
   useEffect(() => {
     employeeService.list().then(({ data }) => setEmployees(data.employees || [])).catch(() => setEmployees([]));
@@ -193,7 +196,7 @@ const EmployeeForm = () => {
           <FormInput as="select" label="Role" name="role" value={form.role} onChange={update} options={[
             { value: 'employee', label: 'Employee' },
             { value: 'manager', label: 'Manager' },
-            { value: 'admin', label: 'Admin' }
+            ...(canAssignAdminRole ? [{ value: 'admin', label: 'Admin' }] : [])
           ]} />
           <FormInput as="select" label="Account status" name="status" value={form.status} onChange={update} options={[
             { value: 'active', label: 'Active' },

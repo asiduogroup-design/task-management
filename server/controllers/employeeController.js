@@ -100,6 +100,11 @@ export const createEmployee = asyncHandler(async (req, res) => {
 
   const loginEmail = workEmail || email;
 
+  if (['admin', 'super_admin'].includes(role) && req.user.role !== 'super_admin') {
+    res.status(403);
+    throw new Error('Only Super Admin can add admin users');
+  }
+
   if (!name || !email || !loginEmail || !temporaryPassword || !employeeCode || !department || !designation) {
     res.status(400);
     throw new Error('Name, email, work email, password, employee ID, department, and designation are required');
@@ -140,6 +145,11 @@ export const updateEmployee = asyncHandler(async (req, res) => {
 
   Object.assign(employee, req.body);
   await employee.save();
+
+  if (req.body.role && ['admin', 'super_admin'].includes(req.body.role) && req.user.role !== 'super_admin') {
+    res.status(403);
+    throw new Error('Only Super Admin can assign admin roles');
+  }
 
   if (req.body.name || req.body.workEmail || req.body.role || req.body.status) {
     await User.findByIdAndUpdate(employee.userId, {

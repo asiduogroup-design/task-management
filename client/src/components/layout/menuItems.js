@@ -1,4 +1,4 @@
-export const adminMenu = [
+export const superAdminMenu = [
   ['Dashboard', '/admin/dashboard'],
   ['Employees', '/admin/employees'],
   ['Attendance', '/admin/attendance'],
@@ -9,6 +9,15 @@ export const adminMenu = [
   ['Reports', '/admin/reports'],
   ['Notifications', '/admin/notifications'],
   ['Settings', '/admin/settings']
+];
+
+export const adminMenu = [
+  ['Dashboard', '/admin/dashboard'],
+  ['Employees', '/admin/employees'],
+  ['Attendance', '/admin/attendance'],
+  ['Leave Management', '/admin/leaves'],
+  ['Reports', '/admin/reports'],
+  ['Notifications', '/admin/notifications']
 ];
 
 export const employeeMenu = [
@@ -37,5 +46,6 @@ export const managerMenu = [
 export const menuForRole = (role) => {
   if (role === 'manager') return managerMenu;
   if (role === 'employee') return employeeMenu;
+  if (role === 'super_admin') return superAdminMenu;
   return adminMenu;
 };

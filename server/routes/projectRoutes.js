@@ -1,11 +1,11 @@
 import express from 'express';
 import { addProjectMember, createProject, deleteProject, getProjectById, getProjects, removeProjectMember, updateProject } from '../controllers/projectController.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { authorize, managerRoles } from '../middleware/roleMiddleware.js';
+import { authorize, managerRoles, ROLES } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
-router.use(protect);
+router.use(protect, authorize(ROLES.SUPER_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE));
 router.route('/').get(getProjects).post(authorize(...managerRoles), createProject);
 router.route('/:id').get(getProjectById).put(authorize(...managerRoles), updateProject).delete(authorize(...managerRoles), deleteProject);
 router.post('/:id/members', authorize(...managerRoles), addProjectMember);

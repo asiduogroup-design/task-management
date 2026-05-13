@@ -37,7 +37,8 @@ import ReviewTasks from '../pages/manager/ReviewTasks.jsx';
 import RoleBasedRoute from './RoleBasedRoute.jsx';
 
 const adminRoles = ['super_admin', 'admin'];
-const managerRoles = ['super_admin', 'admin', 'manager'];
+const superAdminRoles = ['super_admin'];
+const superAdminAndManagerRoles = ['super_admin', 'manager'];
 
 const HomeRedirect = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -57,19 +58,19 @@ const AppRoutes = () => (
     <Route path="/admin/employees/:id/edit" element={<RoleBasedRoute roles={adminRoles}><EmployeeForm /></RoleBasedRoute>} />
     <Route path="/admin/employees/:id" element={<RoleBasedRoute roles={adminRoles}><EmployeeProfileAdmin /></RoleBasedRoute>} />
     <Route path="/admin/attendance" element={<RoleBasedRoute roles={adminRoles}><AttendanceManagement /></RoleBasedRoute>} />
-    <Route path="/admin/projects" element={<RoleBasedRoute roles={adminRoles}><ProjectManagement /></RoleBasedRoute>} />
-    <Route path="/admin/projects/add" element={<RoleBasedRoute roles={adminRoles}><ProjectForm /></RoleBasedRoute>} />
-    <Route path="/admin/projects/:id/edit" element={<RoleBasedRoute roles={adminRoles}><ProjectForm /></RoleBasedRoute>} />
-    <Route path="/admin/projects/:id" element={<RoleBasedRoute roles={managerRoles}><ProjectDetails /></RoleBasedRoute>} />
-    <Route path="/admin/tasks" element={<RoleBasedRoute roles={adminRoles}><TaskManagement /></RoleBasedRoute>} />
-    <Route path="/admin/tasks/add" element={<RoleBasedRoute roles={managerRoles}><TaskForm /></RoleBasedRoute>} />
-    <Route path="/admin/tasks/:id/edit" element={<RoleBasedRoute roles={managerRoles}><TaskForm /></RoleBasedRoute>} />
-    <Route path="/admin/tasks/:id" element={<RoleBasedRoute roles={managerRoles}><TaskDetails /></RoleBasedRoute>} />
+    <Route path="/admin/projects" element={<RoleBasedRoute roles={superAdminRoles}><ProjectManagement /></RoleBasedRoute>} />
+    <Route path="/admin/projects/add" element={<RoleBasedRoute roles={superAdminRoles}><ProjectForm /></RoleBasedRoute>} />
+    <Route path="/admin/projects/:id/edit" element={<RoleBasedRoute roles={superAdminRoles}><ProjectForm /></RoleBasedRoute>} />
+    <Route path="/admin/projects/:id" element={<RoleBasedRoute roles={superAdminAndManagerRoles}><ProjectDetails /></RoleBasedRoute>} />
+    <Route path="/admin/tasks" element={<RoleBasedRoute roles={superAdminRoles}><TaskManagement /></RoleBasedRoute>} />
+    <Route path="/admin/tasks/add" element={<RoleBasedRoute roles={superAdminAndManagerRoles}><TaskForm /></RoleBasedRoute>} />
+    <Route path="/admin/tasks/:id/edit" element={<RoleBasedRoute roles={superAdminAndManagerRoles}><TaskForm /></RoleBasedRoute>} />
+    <Route path="/admin/tasks/:id" element={<RoleBasedRoute roles={superAdminAndManagerRoles}><TaskDetails /></RoleBasedRoute>} />
     <Route path="/admin/daily-work-reports" element={<RoleBasedRoute roles={adminRoles}><DailyWorkReports /></RoleBasedRoute>} />
     <Route path="/admin/leaves" element={<RoleBasedRoute roles={adminRoles}><LeaveManagement /></RoleBasedRoute>} />
     <Route path="/admin/reports" element={<RoleBasedRoute roles={adminRoles}><Reports /></RoleBasedRoute>} />
     <Route path="/admin/notifications" element={<RoleBasedRoute roles={adminRoles}><Notifications title="Notifications" /></RoleBasedRoute>} />
-    <Route path="/admin/settings" element={<RoleBasedRoute roles={adminRoles}><Settings /></RoleBasedRoute>} />
+    <Route path="/admin/settings" element={<RoleBasedRoute roles={superAdminRoles}><Settings /></RoleBasedRoute>} />
 
     <Route path="/employee/dashboard" element={<RoleBasedRoute roles={['employee']}><EmployeeDashboard /></RoleBasedRoute>} />
     <Route path="/employee/attendance" element={<RoleBasedRoute roles={['employee']}><MyAttendance /></RoleBasedRoute>} />

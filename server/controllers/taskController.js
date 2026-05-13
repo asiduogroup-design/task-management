@@ -48,6 +48,8 @@ const userTaskPermissions = (task, req) => {
   return { isApprover, isAssignee };
 };
 
+const isApproverRole = (role) => [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER].includes(role);
+
 export const getTasks = asyncHandler(async (req, res) => {
   const { search, status, employeeId, projectId, priority, deadlineFilter } = req.query;
   const query = taskQueryForUser(req);
@@ -137,6 +139,150 @@ export const getTaskSummary = asyncHandler(async (req, res) => {
       underReviewTasks,
       completedTasks,
       overdueTasks
+    }
+  });
+});
+
+export const getCompletedTaskHistory = asyncHandler(async (req, res) => {
+  const { projectId, fromDate, toDate, approvalStatus, search } = req.query;
+  const isApprover = isApproverRole(req.user.role);
+
+  if (!isApprover && !req.employee?._id) {
+    res.status(400);
+    throw new Error('Employee profile required');
+  }
+
+  const query = {
+    ...taskQueryForUser(req),
+    status: { $in: ['under_review', 'completed', 'reopened'] }
+  };
+
+  if (projectId) {
+    query.projectId = projectId;
+  }
+
+  if (fromDate || toDate) {
+    query.completedAt = {};
+    if (fromDate) {
+      query.completedAt.$gte = new Date(fromDate);
+    }
+    if (toDate) {
+      const endOfDay = new Date(toDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      query.completedAt.$lte = endOfDay;
+    }
+  }
+
+  if (approvalStatus === 'approved') {
+    query.status = 'completed';
+    query.approvedBy = { $exists: true, $ne: null };
+  } else if (approvalStatus === 'pending') {
+    query.$or = [{ status: 'under_review' }, { status: 'completed', approvedBy: { $exists: false } }, { status: 'completed', approvedBy: null }];
+  }
+
+  if (search) {
+    const normalized = String(search).trim();
+    appendAndCondition(query, {
+      $or: [{ title: { $regex: normalized, $options: 'i' } }, { taskCode: { $regex: normalized, $options: 'i' } }]
+    });
+  }
+
+  const tasks = await Task.find(query)
+    .populate('projectId', 'name projectCode')
+    .populate('approvedBy', 'name email role')
+    .populate('reopenedHistory.reopenedBy', 'name email role')
+    .sort({ completedAt: -1, updatedAt: -1, createdAt: -1 });
+
+  const taskIds = tasks.map((task) => task._id);
+
+  const [comments, attachments, workLogs, timeSpentAggregation] = await Promise.all([
+    TaskComment.find({ taskId: { $in: taskIds } }).populate('userId', 'name role').sort({ createdAt: -1 }),
+    TaskAttachment.find({ taskId: { $in: taskIds } }).populate('uploadedBy', 'name role').sort({ createdAt: -1 }),
+    DailyWorkUpdate.find({ taskId: { $in: taskIds }, reportType: 'task_log' }).sort({ date: -1, createdAt: -1 }),
+    DailyWorkUpdate.aggregate([
+      {
+        $match: {
+          taskId: { $in: taskIds },
+          reportType: 'task_log',
+          ...(req.employee?._id ? { employeeId: req.employee._id } : {})
+        }
+      },
+      {
+        $group: {
+          _id: '$taskId',
+          totalTimeSpent: { $sum: { $ifNull: ['$timeSpent', 0] } }
+        }
+      }
+    ])
+  ]);
+
+  const commentsByTask = comments.reduce((accumulator, comment) => {
+    const key = String(comment.taskId);
+    accumulator[key] = accumulator[key] || [];
+    accumulator[key].push(comment);
+    return accumulator;
+  }, {});
+
+  const attachmentsByTask = attachments.reduce((accumulator, attachment) => {
+    const key = String(attachment.taskId);
+    accumulator[key] = accumulator[key] || [];
+    accumulator[key].push(attachment);
+    return accumulator;
+  }, {});
+
+  const latestWorkLogByTask = workLogs.reduce((accumulator, workLog) => {
+    const key = String(workLog.taskId);
+    if (!accumulator[key]) {
+      accumulator[key] = workLog;
+    }
+    return accumulator;
+  }, {});
+
+  const totalTimeSpentByTask = timeSpentAggregation.reduce((accumulator, row) => {
+    accumulator[String(row._id)] = Number(row.totalTimeSpent || 0);
+    return accumulator;
+  }, {});
+
+  const normalizedTasks = tasks.map((task) => {
+    const taskId = String(task._id);
+    const taskComments = commentsByTask[taskId] || [];
+    const taskAttachments = attachmentsByTask[taskId] || [];
+    const adminFeedback = taskComments.filter((comment) => isApproverRole(comment.userId?.role));
+    const latestWorkLog = latestWorkLogByTask[taskId];
+    const approvalStatusLabel = task.status === 'completed' && task.approvedBy ? 'approved' : 'pending';
+
+    return {
+      _id: task._id,
+      title: task.title,
+      taskCode: task.taskCode,
+      projectId: task.projectId?._id || null,
+      projectName: task.projectId?.name || task.projectId?.projectCode || '-',
+      completedDate: task.completedAt || null,
+      approvedBy: task.approvedBy || null,
+      approvedByName: task.approvedBy?.name || task.approvedBy?.email || '-',
+      status: task.status,
+      approvalStatus: approvalStatusLabel,
+      timeSpent: totalTimeSpentByTask[taskId] || 0,
+      details: {
+        completionNotes: latestWorkLog?.completedWork || latestWorkLog?.workDescription || task.notes || '',
+        uploadedFiles: taskAttachments,
+        adminFeedback,
+        reopenedHistory: task.reopenedHistory || []
+      }
+    };
+  });
+
+  const projectOptions = new Map();
+  normalizedTasks.forEach((task) => {
+    if (task.projectId) {
+      projectOptions.set(String(task.projectId), task.projectName);
+    }
+  });
+
+  res.json({
+    tasks: normalizedTasks,
+    filters: {
+      projects: Array.from(projectOptions.entries()).map(([value, label]) => ({ value, label }))
     }
   });
 });
@@ -267,7 +413,8 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
   }
 
   const isAssignee = task.assignedTo.toString() === req.employee?._id?.toString();
-  const isApprover = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER].includes(req.user.role);
+  const isApprover = isApproverRole(req.user.role);
+  const previousStatus = task.status;
   const nextStatus = req.body.status;
   const validStatuses = ['to_do', 'in_progress', 'under_review', 'completed', 'reopened'];
 
@@ -296,7 +443,21 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
   task.status = nextStatus;
   if (nextStatus === 'completed') {
     task.completedAt = new Date();
-    task.approvedBy = req.user._id;
+    task.approvedBy = isApprover ? req.user._id : undefined;
+  }
+
+  if (nextStatus === 'under_review') {
+    task.approvedBy = undefined;
+  }
+
+  if (nextStatus === 'reopened') {
+    task.reopenedHistory = task.reopenedHistory || [];
+    task.reopenedHistory.push({
+      reopenedAt: new Date(),
+      reopenedBy: req.user._id,
+      previousStatus,
+      reason: String(req.body.reason || '').trim()
+    });
   }
   await task.save();
   res.json({ task });
@@ -380,9 +541,17 @@ export const reopenTask = asyncHandler(async (req, res) => {
     throw new Error('Task not found');
   }
 
+  const previousStatus = task.status;
   task.status = 'reopened';
   task.completedAt = undefined;
   task.approvedBy = undefined;
+  task.reopenedHistory = task.reopenedHistory || [];
+  task.reopenedHistory.push({
+    reopenedAt: new Date(),
+    reopenedBy: req.user._id,
+    previousStatus,
+    reason: String(req.body.reason || '').trim()
+  });
   await task.save();
   res.json({ task });
 });

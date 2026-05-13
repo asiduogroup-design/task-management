@@ -32,6 +32,65 @@ const applyRange = (query, fromDate, toDate) => {
   };
 };
 
+const parseYear = (value) => {
+  const currentYear = new Date().getFullYear();
+  const parsed = Number(value || currentYear);
+  if (!Number.isInteger(parsed) || parsed < 1970 || parsed > 3000) return currentYear;
+  return parsed;
+};
+
+const leaveBalanceForEmployee = async (employeeId, year = new Date().getFullYear()) => {
+  const start = new Date(year, 0, 1, 0, 0, 0, 0);
+  const end = new Date(year, 11, 31, 23, 59, 59, 999);
+  const totalLeave = Number(process.env.DEFAULT_ANNUAL_LEAVE_DAYS || 24);
+
+  const [approvedLeaves, pendingLeaves] = await Promise.all([
+    LeaveRequest.aggregate([
+      {
+        $match: {
+          employeeId,
+          status: 'approved',
+          fromDate: { $lte: end },
+          toDate: { $gte: start }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          usedLeave: { $sum: { $ifNull: ['$numberOfDays', 0] } }
+        }
+      }
+    ]),
+    LeaveRequest.aggregate([
+      {
+        $match: {
+          employeeId,
+          status: 'pending',
+          fromDate: { $lte: end },
+          toDate: { $gte: start }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          pendingLeave: { $sum: { $ifNull: ['$numberOfDays', 0] } }
+        }
+      }
+    ])
+  ]);
+
+  const usedLeave = Number(approvedLeaves[0]?.usedLeave || 0);
+  const pendingLeave = Number(pendingLeaves[0]?.pendingLeave || 0);
+
+  return {
+    year,
+    totalLeave,
+    usedLeave,
+    remainingLeave: Math.max(totalLeave - usedLeave, 0),
+    pendingLeave
+  };
+};
+
 export const getLeaveSummary = asyncHandler(async (req, res) => {
   const todayStart = startOfDay();
   const todayEnd = endOfDay();
@@ -83,12 +142,50 @@ export const createLeave = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Employee profile required');
   }
-  if (new Date(req.body.toDate) < new Date(req.body.fromDate)) {
+
+  const leaveType = String(req.body.leaveType || '').trim();
+  const reason = String(req.body.reason || '').trim();
+  const fromDate = req.body.fromDate ? new Date(req.body.fromDate) : null;
+  const toDate = req.body.toDate ? new Date(req.body.toDate) : null;
+
+  if (!leaveType || !reason || !fromDate || !toDate || Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    res.status(400);
+    throw new Error('Leave type, from date, to date, and reason are required');
+  }
+
+  if (toDate < fromDate) {
     res.status(400);
     throw new Error('Leave to date cannot be before from date');
   }
-  const leave = await LeaveRequest.create({ ...req.body, employeeId: req.employee._id, numberOfDays: leaveDays(req.body.fromDate, req.body.toDate) });
+
+  const leave = await LeaveRequest.create({
+    leaveType,
+    fromDate,
+    toDate,
+    reason,
+    attachmentName: String(req.body.attachmentName || '').trim(),
+    attachmentUrl: String(req.body.attachmentUrl || '').trim(),
+    employeeId: req.employee._id,
+    numberOfDays: leaveDays(fromDate, toDate)
+  });
   res.status(201).json({ leave });
+});
+
+export const getLeaveBalance = asyncHandler(async (req, res) => {
+  const year = parseYear(req.query.year);
+  let employeeId = req.employee?._id;
+
+  if (isAdmin(req.user.role) && req.query.employeeId) {
+    employeeId = req.query.employeeId;
+  }
+
+  if (!employeeId) {
+    res.status(400);
+    throw new Error('Employee profile required');
+  }
+
+  const balance = await leaveBalanceForEmployee(employeeId, year);
+  res.json({ balance });
 });
 
 export const getLeaveById = asyncHandler(async (req, res) => {

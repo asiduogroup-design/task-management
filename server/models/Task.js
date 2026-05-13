@@ -40,7 +40,15 @@ const taskSchema = new mongoose.Schema(
       default: 'to_do'
     },
     completedAt: Date,
-    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reopenedHistory: [
+      {
+        reopenedAt: { type: Date, default: Date.now },
+        reopenedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        previousStatus: { type: String, default: 'completed' },
+        reason: { type: String, default: '' }
+      }
+    ]
   },
   { timestamps: true }
 );

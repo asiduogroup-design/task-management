@@ -8,6 +8,7 @@ const leaveRequestSchema = new mongoose.Schema(
     toDate: { type: Date, required: true },
     numberOfDays: { type: Number, required: true },
     reason: { type: String, required: true },
+    attachmentName: { type: String, default: '' },
     attachmentUrl: { type: String, default: '' },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     adminRemarks: { type: String, default: '' },

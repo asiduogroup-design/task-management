@@ -3,8 +3,10 @@ import api from './api.js';
 export const taskService = {
   summary: () => api.get('/tasks/summary'),
   list: (params) => api.get('/tasks', { params }),
+  completedHistory: (params) => api.get('/tasks/completed-history', { params }),
   create: (payload) => api.post('/tasks', payload),
   detail: (id) => api.get(`/tasks/${id}`),
+  completedTaskDetail: (id) => api.get(`/tasks/${id}`),
   update: (id, payload) => api.put(`/tasks/${id}`, payload),
   remove: (id) => api.delete(`/tasks/${id}`),
   status: (id, status) => api.patch(`/tasks/${id}/status`, { status }),

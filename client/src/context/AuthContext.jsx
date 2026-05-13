@@ -57,6 +57,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    if (!localStorage.getItem('ewms_token')) return null;
+    const { data } = await authService.me();
+    setUser(data.user);
+    localStorage.setItem('ewms_user', JSON.stringify(data.user));
+    return data.user;
+  }, []);
+
   useEffect(() => {
     const loadMe = async () => {
       if (!token) {
@@ -83,9 +91,10 @@ export const AuthProvider = ({ children }) => {
       loading,
       isAuthenticated: Boolean(user && token),
       login,
-      logout
+      logout,
+      refreshUser
     }),
-    [loading, login, logout, token, user]
+    [loading, login, logout, refreshUser, token, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

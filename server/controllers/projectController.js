@@ -4,6 +4,7 @@ import ProjectMember from '../models/ProjectMember.js';
 import Milestone from '../models/Milestone.js';
 import Task from '../models/Task.js';
 import DailyWorkUpdate from '../models/DailyWorkUpdate.js';
+import Notification from '../models/Notification.js';
 import { ROLES } from '../middleware/roleMiddleware.js';
 
 const normalizeProjectPayload = (body) => {
@@ -55,6 +56,42 @@ const projectAccessQuery = async (req) => {
   if ([ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(req.user.role)) return {};
   const memberRows = await ProjectMember.find({ employeeId: req.employee?._id }).select('projectId');
   return { _id: { $in: memberRows.map((row) => row.projectId) } };
+};
+
+const memberUserIds = async (projectId) => {
+  const members = await ProjectMember.find({ projectId }).populate('employeeId', 'userId');
+  return members
+    .map((member) => member.employeeId?.userId)
+    .filter(Boolean)
+    .map((value) => String(value));
+};
+
+const notifyProjectMembers = async (projectId, payloadBuilder) => {
+  const userIds = await memberUserIds(projectId);
+  if (!userIds.length) return;
+
+  await Promise.all(
+    userIds.map(async (userId) => {
+      const payload = payloadBuilder(userId);
+
+      if (payload.eventKey) {
+        await Notification.findOneAndUpdate(
+          { userId, eventKey: payload.eventKey },
+          { $setOnInsert: { userId, type: 'project', actionPath: `/employee/projects/${projectId}`, referenceId: projectId, ...payload } },
+          { upsert: true }
+        );
+        return;
+      }
+
+      await Notification.create({
+        userId,
+        type: 'project',
+        actionPath: `/employee/projects/${projectId}`,
+        referenceId: projectId,
+        ...payload
+      });
+    })
+  );
 };
 
 export const getProjects = asyncHandler(async (req, res) => {
@@ -198,6 +235,13 @@ export const createProject = asyncHandler(async (req, res) => {
   const project = await Project.create({ ...projectFields, createdBy: req.user._id });
   await syncProjectMembers(project._id, members);
   await syncProjectMilestones(project._id, milestones);
+
+  await notifyProjectMembers(project._id, (userId) => ({
+    title: 'Added to project',
+    message: `You were added to project "${project.name}".`,
+    subtype: 'project_added',
+    eventKey: `project:added:${project._id}:${userId}`
+  }));
 
   const savedProject = await Project.findById(project._id).populate('managerId', 'employeeCode designation');
   const savedMembers = await ProjectMember.find({ projectId: project._id }).populate({ path: 'employeeId', populate: { path: 'userId', select: 'name email' } });
@@ -364,18 +408,41 @@ export const getProjectById = asyncHandler(async (req, res) => {
 export const updateProject = asyncHandler(async (req, res) => {
   const { projectFields, members, milestones } = normalizeProjectPayload(req.body);
 
+  const previousProject = await Project.findById(req.params.id);
+  if (!previousProject) {
+    res.status(404);
+    throw new Error('Project not found');
+  }
+
   if (projectFields.deadline && projectFields.startDate && new Date(projectFields.deadline) < new Date(projectFields.startDate)) {
     res.status(400);
     throw new Error('Deadline cannot be before start date');
   }
   const project = await Project.findByIdAndUpdate(req.params.id, projectFields, { new: true, runValidators: true }).populate('managerId', 'employeeCode designation');
-  if (!project) {
-    res.status(404);
-    throw new Error('Project not found');
-  }
 
   if (Array.isArray(req.body.members)) await syncProjectMembers(project._id, members);
   if (Array.isArray(req.body.milestones)) await syncProjectMilestones(project._id, milestones);
+
+  const previousDeadline = previousProject.deadline ? new Date(previousProject.deadline).getTime() : null;
+  const currentDeadline = project.deadline ? new Date(project.deadline).getTime() : null;
+
+  if (previousDeadline !== currentDeadline && project.deadline) {
+    await notifyProjectMembers(project._id, (userId) => ({
+      title: 'Project deadline update',
+      message: `Deadline for "${project.name}" was updated to ${new Date(project.deadline).toLocaleDateString()}.`,
+      subtype: 'project_deadline_update',
+      eventKey: `project:deadline_update:${project._id}:${new Date(project.deadline).toISOString().slice(0, 10)}:${userId}`
+    }));
+  }
+
+  if (previousProject.status !== project.status) {
+    await notifyProjectMembers(project._id, (userId) => ({
+      title: 'Project status changed',
+      message: `Status for "${project.name}" changed to ${String(project.status || '').replaceAll('_', ' ')}.`,
+      subtype: 'project_status_changed',
+      eventKey: `project:status_changed:${project._id}:${project.status}:${userId}`
+    }));
+  }
 
   const savedMembers = await ProjectMember.find({ projectId: project._id }).populate({ path: 'employeeId', populate: { path: 'userId', select: 'name email' } });
   const savedMilestones = await Milestone.find({ projectId: project._id }).populate('responsibleEmployeeId', 'employeeCode designation');
@@ -391,6 +458,29 @@ export const deleteProject = asyncHandler(async (req, res) => {
 
 export const addProjectMember = asyncHandler(async (req, res) => {
   const member = await ProjectMember.create({ projectId: req.params.id, employeeId: req.body.employeeId, role: req.body.role || 'member' });
+
+  const project = await Project.findById(req.params.id).select('name');
+  const populatedMember = await ProjectMember.findById(member._id).populate('employeeId', 'userId');
+  if (populatedMember?.employeeId?.userId) {
+    const userId = String(populatedMember.employeeId.userId);
+    await Notification.findOneAndUpdate(
+      { userId, eventKey: `project:added:${req.params.id}:${userId}` },
+      {
+        $setOnInsert: {
+          userId,
+          title: 'Added to project',
+          message: `You were added to project "${project?.name || 'Project'}".`,
+          type: 'project',
+          subtype: 'project_added',
+          actionPath: `/employee/projects/${req.params.id}`,
+          referenceId: req.params.id,
+          eventKey: `project:added:${req.params.id}:${userId}`
+        }
+      },
+      { upsert: true }
+    );
+  }
+
   res.status(201).json({ member });
 });
 

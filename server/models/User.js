@@ -11,7 +11,13 @@ const userSchema = new mongoose.Schema(
       enum: ['super_admin', 'admin', 'manager', 'employee'],
       default: 'employee'
     },
-    status: { type: String, enum: ['active', 'inactive'], default: 'active' }
+    status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    notificationPreferences: {
+      inAppNotifications: { type: Boolean, default: true },
+      emailNotifications: { type: Boolean, default: true },
+      taskUpdates: { type: Boolean, default: true },
+      leaveUpdates: { type: Boolean, default: true }
+    }
   },
   { timestamps: true }
 );

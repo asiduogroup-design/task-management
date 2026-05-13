@@ -28,24 +28,54 @@ const sections = [
   }
 ];
 
+const employeeSections = [
+  {
+    key: 'task',
+    title: 'Task Notifications',
+    subtypes: ['task_assigned', 'task_deadline_reminder', 'task_comment_added', 'task_approved', 'task_reopened']
+  },
+  {
+    key: 'project',
+    title: 'Project Notifications',
+    subtypes: ['project_added', 'project_deadline_update', 'project_status_changed']
+  },
+  {
+    key: 'attendance',
+    title: 'Attendance Notifications',
+    subtypes: ['missing_logout_reminder', 'late_login_notice', 'daily_update_reminder']
+  },
+  {
+    key: 'leave',
+    title: 'Leave Notifications',
+    subtypes: ['leave_approved', 'leave_rejected', 'leave_admin_remarks']
+  }
+];
+
 const Notifications = ({ title = 'Notifications' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { notifications, loadNotifications, markRead, removeNotification } = useNotifications();
   const isAdmin = ['admin', 'super_admin'].includes(user?.role);
+  const isEmployee = user?.role === 'employee';
+  const activeSections = isEmployee ? employeeSections : sections;
 
   useEffect(() => {
     loadNotifications().catch(() => {});
   }, []);
 
   const grouped = useMemo(() => {
-    const bucket = sections.reduce((accumulator, section) => ({ ...accumulator, [section.key]: [] }), {});
+    const bucket = activeSections.reduce((accumulator, section) => ({ ...accumulator, [section.key]: [] }), {});
     notifications.forEach((notification) => {
-      const section = sections.find((item) => item.subtypes.includes(notification.subtype));
-      if (section) bucket[section.key].push(notification);
+      const section =
+        activeSections.find((item) => item.subtypes.includes(notification.subtype)) ||
+        activeSections.find((item) => item.key === notification.type) ||
+        (notification.type === 'daily_update' ? activeSections.find((item) => item.key === 'attendance') : null);
+      if (section) {
+        bucket[section.key].push(notification);
+      }
     });
     return bucket;
-  }, [notifications]);
+  }, [activeSections, notifications]);
 
   const viewDetails = async (notification) => {
     if (!notification.isRead) {
@@ -64,9 +94,9 @@ const Notifications = ({ title = 'Notifications' }) => {
     <ModulePage title={title}>
       {notifications.length === 0 && <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm">No notifications available.</p>}
 
-      {isAdmin ? (
+      {isAdmin || isEmployee ? (
         <div className="space-y-5">
-          {sections.map((section) => (
+          {activeSections.map((section) => (
             <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" key={section.key}>
               <h3 className="text-lg font-black text-slate-900">{section.title}</h3>
               <div className="mt-3 space-y-3">

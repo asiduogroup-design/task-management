@@ -6,6 +6,7 @@ import Task from '../models/Task.js';
 import Project from '../models/Project.js';
 import Milestone from '../models/Milestone.js';
 import LeaveRequest from '../models/LeaveRequest.js';
+import DailyWorkUpdate from '../models/DailyWorkUpdate.js';
 import { ROLES } from '../middleware/roleMiddleware.js';
 
 const startOfDay = (date = new Date()) => {
@@ -384,8 +385,94 @@ const syncAdminNotifications = async (user) => {
   await upsertGeneratedNotifications(candidates);
 };
 
+const generateEmployeeNotifications = async (user, employee) => {
+  if (user.role !== ROLES.EMPLOYEE || !employee?._id) return [];
+
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+  const threeDaysAhead = new Date(now);
+  threeDaysAhead.setDate(threeDaysAhead.getDate() + 3);
+
+  const [todayAttendance, todayDailyUpdate, upcomingTasks] = await Promise.all([
+    Attendance.findOne({ employeeId: employee._id, date: { $gte: todayStart, $lt: todayEnd } }),
+    DailyWorkUpdate.findOne({ employeeId: employee._id, reportType: 'daily_report', date: { $gte: todayStart, $lt: todayEnd } }),
+    Task.find({
+      assignedTo: employee._id,
+      status: { $nin: ['completed', 'draft'] },
+      dueDate: { $gte: now, $lte: threeDaysAhead }
+    }).select('_id title dueDate updatedAt')
+  ]);
+
+  const candidates = [];
+  const dayKey = todayStart.toISOString().slice(0, 10);
+
+  if (todayAttendance?.status === 'late') {
+    candidates.push(createCandidate({
+      userId: user._id,
+      title: 'Late login notice',
+      message: 'Your attendance is marked late for today.',
+      type: 'attendance',
+      subtype: 'late_login_notice',
+      actionPath: '/employee/attendance',
+      eventKey: `employee:attendance:late_login_notice:${dayKey}`,
+      referenceId: todayAttendance._id,
+      createdAt: todayAttendance.updatedAt || now
+    }));
+  }
+
+  if (todayAttendance?.loginTime && !todayAttendance?.logoutTime && now.getHours() >= 18) {
+    candidates.push(createCandidate({
+      userId: user._id,
+      title: 'Missing logout reminder',
+      message: 'You are still logged in. Please mark logout for today.',
+      type: 'attendance',
+      subtype: 'missing_logout_reminder',
+      actionPath: '/employee/attendance',
+      eventKey: `employee:attendance:missing_logout_reminder:${dayKey}`,
+      referenceId: todayAttendance._id,
+      createdAt: now
+    }));
+  }
+
+  if (!todayDailyUpdate && now.getHours() >= 17) {
+    candidates.push(createCandidate({
+      userId: user._id,
+      title: 'Daily update reminder',
+      message: 'Please submit your daily work update before end of day.',
+      type: 'attendance',
+      subtype: 'daily_update_reminder',
+      actionPath: '/employee/daily-update',
+      eventKey: `employee:attendance:daily_update_reminder:${dayKey}`,
+      createdAt: now
+    }));
+  }
+
+  upcomingTasks.forEach((task) => {
+    candidates.push(createCandidate({
+      userId: user._id,
+      title: 'Task deadline reminder',
+      message: `Task "${task.title}" is due on ${new Date(task.dueDate).toLocaleDateString()}.`,
+      type: 'task',
+      subtype: 'task_deadline_reminder',
+      actionPath: `/employee/tasks/${task._id}`,
+      eventKey: `employee:task:deadline_reminder:${task._id}:${new Date(task.dueDate).toISOString().slice(0, 10)}`,
+      referenceId: task._id,
+      createdAt: task.updatedAt || now
+    }));
+  });
+
+  return candidates;
+};
+
+const syncEmployeeNotifications = async (user, employee) => {
+  const candidates = await generateEmployeeNotifications(user, employee);
+  await upsertGeneratedNotifications(candidates);
+};
+
 export const getNotifications = asyncHandler(async (req, res) => {
   await syncAdminNotifications(req.user);
+  await syncEmployeeNotifications(req.user, req.employee);
   const notifications = await Notification.find({ userId: req.user._id }).sort({ createdAt: -1 });
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
   res.json({ notifications, unreadCount });

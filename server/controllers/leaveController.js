@@ -235,13 +235,41 @@ const updateLeaveDecision = async (req, status) => {
 
   const employee = await Employee.findById(leave.employeeId);
   if (employee) {
-    await Notification.create({
-      userId: employee.userId,
-      title: `Leave ${status}`,
-      message: `Your leave request was ${status}.`,
-      type: 'leave',
-      referenceId: leave._id
-    });
+    await Notification.findOneAndUpdate(
+      { userId: employee.userId, eventKey: `leave:${status}:${leave._id}` },
+      {
+        $setOnInsert: {
+          userId: employee.userId,
+          title: `Leave ${status}`,
+          message: `Your leave request was ${status}.`,
+          type: 'leave',
+          subtype: status === 'approved' ? 'leave_approved' : 'leave_rejected',
+          referenceId: leave._id,
+          actionPath: '/employee/leaves',
+          eventKey: `leave:${status}:${leave._id}`
+        }
+      },
+      { upsert: true }
+    );
+
+    if (String(leave.adminRemarks || '').trim()) {
+      await Notification.findOneAndUpdate(
+        { userId: employee.userId, eventKey: `leave:remarks:${status}:${leave._id}` },
+        {
+          $setOnInsert: {
+            userId: employee.userId,
+            title: 'Admin remarks',
+            message: `Admin remarks: ${leave.adminRemarks}`,
+            type: 'leave',
+            subtype: 'leave_admin_remarks',
+            referenceId: leave._id,
+            actionPath: '/employee/leaves',
+            eventKey: `leave:remarks:${status}:${leave._id}`
+          }
+        },
+        { upsert: true }
+      );
+    }
   }
   return leave;
 };

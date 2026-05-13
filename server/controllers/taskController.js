@@ -50,6 +50,38 @@ const userTaskPermissions = (task, req) => {
 
 const isApproverRole = (role) => [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER].includes(role);
 
+const notifyAssignee = async (task, payload) => {
+  if (!task?.assignedTo) return;
+
+  const employee = await Employee.findById(task.assignedTo).select('userId');
+  if (!employee?.userId) return;
+
+  if (payload.eventKey) {
+    await Notification.findOneAndUpdate(
+      { userId: employee.userId, eventKey: payload.eventKey },
+      {
+        $setOnInsert: {
+          userId: employee.userId,
+          type: 'task',
+          actionPath: `/employee/tasks/${task._id}`,
+          referenceId: task._id,
+          ...payload
+        }
+      },
+      { upsert: true }
+    );
+    return;
+  }
+
+  await Notification.create({
+    userId: employee.userId,
+    type: 'task',
+    actionPath: `/employee/tasks/${task._id}`,
+    referenceId: task._id,
+    ...payload
+  });
+};
+
 export const getTasks = asyncHandler(async (req, res) => {
   const { search, status, employeeId, projectId, priority, deadlineFilter } = req.query;
   const query = taskQueryForUser(req);
@@ -313,14 +345,12 @@ export const createTask = asyncHandler(async (req, res) => {
     );
   }
 
-  const employee = await Employee.findById(task.assignedTo);
-  if (employee && task.status !== 'draft') {
-    await Notification.create({
-      userId: employee.userId,
-      title: 'Task assigned',
+  if (task.status !== 'draft') {
+    await notifyAssignee(task, {
+      title: 'New task assigned',
       message: `You were assigned "${task.title}".`,
-      type: 'task',
-      referenceId: task._id
+      subtype: 'task_assigned',
+      eventKey: `task:assigned:${task._id}:${task.assignedTo}`
     });
   }
   res.status(201).json({ task });
@@ -460,6 +490,25 @@ export const updateTaskStatus = asyncHandler(async (req, res) => {
     });
   }
   await task.save();
+
+  if (nextStatus === 'completed' && isApprover) {
+    await notifyAssignee(task, {
+      title: 'Task approved',
+      message: `Your task "${task.title}" was approved.`,
+      subtype: 'task_approved',
+      eventKey: `task:approved:${task._id}`
+    });
+  }
+
+  if (nextStatus === 'reopened' && isApprover) {
+    await notifyAssignee(task, {
+      title: 'Task reopened',
+      message: `Your task "${task.title}" was reopened for updates.`,
+      subtype: 'task_reopened',
+      eventKey: `task:reopened:${task._id}:${task.updatedAt?.toISOString() || Date.now()}`
+    });
+  }
+
   res.json({ task });
 });
 
@@ -485,12 +534,11 @@ export const reassignTask = asyncHandler(async (req, res) => {
   task.assignedTo = employeeId;
   await task.save();
 
-  await Notification.create({
-    userId: employee.userId,
-    title: 'Task reassigned',
+  await notifyAssignee(task, {
+    title: 'New task assigned',
     message: `You were assigned "${task.title}".`,
-    type: 'task',
-    referenceId: task._id
+    subtype: 'task_assigned',
+    eventKey: `task:assigned:${task._id}:${employeeId}`
   });
 
   res.json({ task });
@@ -517,6 +565,14 @@ export const changeTaskDeadline = asyncHandler(async (req, res) => {
 
   task.dueDate = nextDueDate;
   await task.save();
+
+  await notifyAssignee(task, {
+    title: 'Task deadline reminder',
+    message: `Deadline for "${task.title}" is ${nextDueDate.toLocaleDateString()}.`,
+    subtype: 'task_deadline_reminder',
+    eventKey: `task:deadline_update:${task._id}:${nextDueDate.toISOString().slice(0, 10)}`
+  });
+
   res.json({ task });
 });
 
@@ -531,6 +587,14 @@ export const markTaskCompleted = asyncHandler(async (req, res) => {
   task.completedAt = new Date();
   task.approvedBy = req.user._id;
   await task.save();
+
+  await notifyAssignee(task, {
+    title: 'Task approved',
+    message: `Your task "${task.title}" was approved.`,
+    subtype: 'task_approved',
+    eventKey: `task:approved:${task._id}`
+  });
+
   res.json({ task });
 });
 
@@ -553,6 +617,14 @@ export const reopenTask = asyncHandler(async (req, res) => {
     reason: String(req.body.reason || '').trim()
   });
   await task.save();
+
+  await notifyAssignee(task, {
+    title: 'Task reopened',
+    message: `Your task "${task.title}" was reopened for updates.`,
+    subtype: 'task_reopened',
+    eventKey: `task:reopened:${task._id}:${Date.now()}`
+  });
+
   res.json({ task });
 });
 
@@ -575,6 +647,16 @@ export const addTaskComment = asyncHandler(async (req, res) => {
   }
 
   const comment = await TaskComment.create({ taskId: req.params.id, userId: req.user._id, comment: req.body.comment });
+
+  if (isApprover) {
+    await notifyAssignee(task, {
+      title: 'Task comment added',
+      message: `A reviewer added a comment on "${task.title}".`,
+      subtype: 'task_comment_added',
+      eventKey: `task:comment:${comment._id}`
+    });
+  }
+
   res.status(201).json({ comment });
 });
 

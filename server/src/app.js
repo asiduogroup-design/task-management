@@ -12,20 +12,40 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173,http://
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+const allowVercelPreviewOrigins = (process.env.ALLOW_VERCEL_PREVIEW_ORIGINS || 'true').toLowerCase() !== 'false';
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
+const isAllowedOrigin = (origin) => {
+  if (!origin) {
+    return true;
+  }
 
-      callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
-    credentials: true
-  })
-);
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  if (allowVercelPreviewOrigins && /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) {
+    return true;
+  }
+
+  return false;
+};
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 

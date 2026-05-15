@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { getDashboardPath } from '../../context/AuthContext.jsx';
 import { useNotifications } from '../../context/NotificationContext.jsx';
@@ -24,8 +24,9 @@ const initialsFromName = (name) =>
     .slice(0, 2)
     .toUpperCase() || 'U';
 
-const Navbar = ({ onMenu }) => {
+const Navbar = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { unreadCount, loadNotifications } = useNotifications();
   const notificationsPath = notificationsPathByRole[user?.role] || '/admin/notifications';
   const dashboardPath = getDashboardPath(user?.role);
@@ -41,20 +42,11 @@ const Navbar = ({ onMenu }) => {
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-6">
         <div className="flex items-center gap-3">
-          <Link
-            aria-label="Open dashboard"
-            className="rounded-md border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
-            to={dashboardPath}
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h7.5v7.5h-7.5zm9 0h7.5v4.5h-7.5zm0 6h7.5v10.5h-7.5zm-9 3h7.5v7.5h-7.5z" />
-            </svg>
-          </Link>
           <button
-            aria-label="Open sidebar menu"
+            aria-label="Open dashboard"
             className="btn-secondary inline-flex items-center justify-center md:hidden"
             type="button"
-            onClick={onMenu}
+            onClick={() => navigate(dashboardPath)}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />

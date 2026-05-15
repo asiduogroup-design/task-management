@@ -16,7 +16,7 @@ const DashboardLayout = ({ title, children }) => {
       />
       {open && <button aria-label="Close menu" className="fixed inset-0 z-30 bg-slate-950/30 md:hidden" type="button" onClick={() => setOpen(false)} />}
       <section className="min-w-0 flex-1">
-        <Navbar onMenu={() => setOpen(true)} />
+        <Navbar />
         <div className="px-4 py-6 md:px-6">
           <h2 className="mb-5 text-2xl font-black text-slate-950">{title}</h2>
           {children}

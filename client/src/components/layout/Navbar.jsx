@@ -39,7 +39,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/70 backdrop-blur-xl">
       <div className="flex h-16 items-center justify-between gap-3 px-4 md:px-6">
         <div className="flex items-center gap-3">
           <button
@@ -57,7 +57,7 @@ const Navbar = () => {
         <div className="flex items-center gap-3">
           <Link
             aria-label="Open notifications"
-            className="relative rounded-md border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
+            className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-white"
             to={notificationsPath}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
@@ -71,7 +71,7 @@ const Navbar = () => {
           </Link>
           <Link
             aria-label="Open profile"
-            className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-700"
+            className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
             to={profilePath}
           >
             {avatarSrc ? (

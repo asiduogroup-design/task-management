@@ -1,19 +1,79 @@
+/* ─────────────────────────────────────────────────────────────
+   Premium font stack
+   • Outfit       — geometric ultra-clean sans, body & UI
+   • Cormorant Garamond — high-contrast luxury serif, headings
+   ───────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 :root {
-  color: #172033;
-  background: #f5f7fb;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  --font-body: 'Outfit', ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', 'Georgia', ui-serif, serif;
+
+  --ink-950: #0f172a;
+  --ink-900: #15233b;
+  --ink-700: #334155;
+  --ink-500: #64748b;
+  --paper-0: #ffffff;
+  --paper-50: #f8fafc;
+  --paper-100: #f1f5f9;
+  --paper-200: #e2e8f0;
+  --brand-700: #1d4ed8;
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --teal-500: #0d9488;
+  --rose-500: #e11d48;
+  --amber-500: #b45309;
+  --focus: rgba(37, 99, 235, 0.24);
+  --surface-border: rgba(148, 163, 184, 0.28);
+  --surface-bg: rgba(255, 255, 255, 0.76);
+  --surface-bg-strong: rgba(255, 255, 255, 0.9);
+  --surface-shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
+  --surface-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+  color: var(--ink-900);
+  background: var(--paper-50);
+  font-family: var(--font-body);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga' 1, 'kern' 1, 'ss01' 1;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--ink-900);
+  background:
+    radial-gradient(circle at 8% -18%, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0) 38%),
+    radial-gradient(circle at 100% 120%, rgba(13, 148, 136, 0.2), rgba(13, 148, 136, 0) 46%),
+    linear-gradient(160deg, #f8fafc 0%, #eef4ff 48%, #ecfeff 100%);
+  line-height: 1.6;
+  letter-spacing: 0.008em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+  line-height: 1.18;
+  font-weight: 600;
+  color: var(--ink-950);
 }
 
 button,
@@ -23,42 +83,156 @@ textarea {
   font: inherit;
 }
 
+a {
+  color: inherit;
+}
+
+.surface-card {
+  border: 1px solid var(--surface-border);
+  background: var(--surface-bg);
+  box-shadow: var(--surface-shadow-soft);
+  backdrop-filter: blur(8px);
+}
+
+.surface-card-strong {
+  border: 1px solid var(--surface-border);
+  background: var(--surface-bg-strong);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: blur(10px);
+}
+
 .form-field {
   width: 100%;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.875rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0.72rem 0.82rem;
+  font-size: 0.89rem;
+  color: var(--ink-900);
   outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.form-field::placeholder {
+  color: #8fa0b9;
+}
+
+.form-field:hover {
+  border-color: rgba(71, 85, 105, 0.35);
 }
 
 .form-field:focus {
-  border-color: #2458d3;
-  box-shadow: 0 0 0 3px rgba(36, 88, 211, 0.16);
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 4px var(--focus);
+  background: rgba(255, 255, 255, 1);
 }
 
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  background: #2458d3;
-  padding: 0.65rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #fff;
-}
-
+.btn-primary,
 .btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
+  gap: 0.45rem;
+  border-radius: 0.8rem;
   padding: 0.65rem 1rem;
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  color: #172033;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.btn-primary {
+  border: 1px solid rgba(29, 78, 216, 0.45);
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink-900);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.32);
+  background: rgba(248, 250, 252, 0.95);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+  box-shadow: none;
+}
+
+.page-enter {
+  animation: page-fade-in 420ms ease both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-glow {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0) scale(1.02);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* App-wide utility refinements for existing tailwind classes used throughout pages. */
+.bg-white {
+  background-color: rgba(255, 255, 255, 0.84);
+}
+
+.bg-slate-50 {
+  background-color: rgba(248, 250, 252, 0.82);
+}
+
+.border-slate-200 {
+  border-color: rgba(148, 163, 184, 0.32);
+}
+
+.shadow-sm {
+  box-shadow: var(--surface-shadow-soft);
+}
+
+.shadow-soft {
+  box-shadow: var(--surface-shadow);
 }

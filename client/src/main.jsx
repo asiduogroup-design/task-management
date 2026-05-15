@@ -6,6 +6,7 @@ import { NotificationProvider } from './context/NotificationContext.jsx';
 import { UserProvider } from './context/UserContext.jsx';
 import './styles/tailwind.css';
 import './styles/index.css';
+import './styles/employee.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

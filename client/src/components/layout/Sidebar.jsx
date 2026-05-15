@@ -2,9 +2,29 @@ import { NavLink } from 'react-router-dom';
 import { menuForRole } from './menuItems.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-const SidebarIcon = ({ name }) => {
+const iconToneByName = {
+  dashboard: 'text-blue-600',
+  employees: 'text-sky-600',
+  teamMembers: 'text-cyan-600',
+  attendance: 'text-teal-600',
+  projects: 'text-violet-600',
+  tasks: 'text-indigo-600',
+  todoList: 'text-fuchsia-600',
+  dailyReports: 'text-emerald-600',
+  dailyUpdate: 'text-emerald-600',
+  completedTasks: 'text-green-600',
+  leaveManagement: 'text-rose-600',
+  leaveRequest: 'text-rose-600',
+  reports: 'text-orange-600',
+  notifications: 'text-amber-600',
+  settings: 'text-slate-600',
+  profile: 'text-purple-600',
+  reviewTasks: 'text-lime-600'
+};
+
+const SidebarIcon = ({ name, className = '' }) => {
   const commonProps = {
-    className: 'h-5 w-5 shrink-0',
+    className: `h-5 w-5 shrink-0 ${className}`,
     fill: 'none',
     stroke: 'currentColor',
     strokeWidth: 1.8,
@@ -122,18 +142,18 @@ const Sidebar = ({ collapsed, open, onClose, onToggleCollapse }) => {
 
   return (
     <aside
-      className={`${open ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200 bg-white transition-all duration-300 md:static md:translate-x-0 ${collapsed ? 'md:w-20' : 'md:w-72'}`}
+      className={`${open ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200/80 bg-white/90 shadow-soft backdrop-blur-lg transition-all duration-300 md:static md:translate-x-0 ${collapsed ? 'md:w-20' : 'md:w-72'}`}
     >
       <div className="flex h-full flex-col">
-        <div className={`${collapsed ? 'px-2 py-4' : 'px-5 py-4'} border-b border-slate-200 transition-all duration-300`}>
+        <div className={`${collapsed ? 'px-2 py-4' : 'px-5 py-4'} border-b border-slate-200/80 transition-all duration-300`}>
           <div className="hidden items-start justify-between gap-2 md:flex">
             <div className={`${collapsed ? 'hidden' : 'block'}`}>
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Employee Workspace</p>
-              <h1 className="mt-1 text-lg font-black text-slate-950">Management System</h1>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Employee Workspace</p>
+              <h1 className="mt-1 text-lg font-bold text-slate-950">Management System</h1>
             </div>
             <button
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="rounded-md border border-slate-200 bg-white px-2 py-1 text-base font-black leading-none text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white/90 text-base font-black leading-none text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/70"
               type="button"
               onClick={onToggleCollapse}
             >
@@ -141,32 +161,37 @@ const Sidebar = ({ collapsed, open, onClose, onToggleCollapse }) => {
             </button>
           </div>
           <div className="md:hidden">
-            <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Employee Workspace</p>
-            <h1 className="mt-1 text-lg font-black text-slate-950">Management System</h1>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Employee Workspace</p>
+            <h1 className="mt-1 text-lg font-bold text-slate-950">Management System</h1>
           </div>
           <div className={`${collapsed ? 'mt-1 flex justify-center md:flex' : 'hidden'}`}>
             <span className="text-lg font-black text-blue-700">EW</span>
           </div>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto p-3">
           {menu.map(([label, path, icon]) => (
             <NavLink
               className={({ isActive }) =>
-                `block rounded-md px-3 py-2 text-sm font-bold ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`
+                `block rounded-xl px-3 py-2.5 text-sm font-bold transition ${isActive ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900'}`
               }
               key={path}
               onClick={onClose}
               to={path}
               title={collapsed ? label : undefined}
             >
-              <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-                <SidebarIcon name={icon} />
-                <span className={`${collapsed ? 'hidden' : 'inline'}`}>{label}</span>
-              </span>
+              {({ isActive }) => {
+                const iconTone = isActive ? 'text-white' : (iconToneByName[icon] || 'text-slate-500');
+                return (
+                  <span className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+                    <SidebarIcon name={icon} className={iconTone} />
+                    <span className={`${collapsed ? 'hidden' : 'inline'}`}>{label}</span>
+                  </span>
+                );
+              }}
             </NavLink>
           ))}
         </nav>
-        <div className="border-t border-slate-200 p-3">
+        <div className="border-t border-slate-200/80 p-3">
           <button className={`btn-secondary ${collapsed ? 'w-auto px-3' : 'w-full'}`} title={collapsed ? 'Logout' : undefined} type="button" onClick={logout}>
             {collapsed ? 'Out' : 'Logout'}
           </button>

@@ -1,16 +1,16 @@
 const StatCard = ({ label, value, tone = 'brand' }) => {
   const toneClasses = {
-    brand: 'bg-brand/10 text-brand',
-    mint: 'bg-mint/10 text-mint',
-    amber: 'bg-amber/10 text-amber'
+    brand: 'bg-blue-100/80 text-blue-700 border border-blue-200/70',
+    mint: 'bg-teal-100/80 text-teal-700 border border-teal-200/70',
+    amber: 'bg-amber-100/80 text-amber-700 border border-amber-200/80'
   };
 
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-      <div className={`mb-4 inline-flex rounded-md px-3 py-1 text-xs font-bold ${toneClasses[tone]}`}>
+    <article className="surface-card-strong page-enter rounded-2xl p-5">
+      <div className={`mb-4 inline-flex rounded-full px-3 py-1 text-xs font-bold ${toneClasses[tone]}`}>
         {label}
       </div>
-      <p className="text-3xl font-bold text-ink">{value}</p>
+      <p className="text-3xl font-extrabold text-slate-900">{value}</p>
     </article>
   );
 };

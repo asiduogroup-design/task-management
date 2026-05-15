@@ -5,10 +5,10 @@ const DashboardShell = ({ title, subtitle, children }) => {
 
   return (
     <main className="min-h-screen bg-field">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-slate-200/80 bg-white/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand">Employee Workspace</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Employee Workspace</p>
             <h1 className="text-xl font-bold text-ink">{title}</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -23,7 +23,7 @@ const DashboardShell = ({ title, subtitle, children }) => {
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="page-enter mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-ink">{subtitle}</h2>
         </div>

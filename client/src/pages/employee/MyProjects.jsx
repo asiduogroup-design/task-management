@@ -105,7 +105,7 @@ const MyProjects = () => {
     <ModulePage title="My Projects">
       {error && <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>}
 
-      <section className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
+      <section className="employee-project-hero rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">Assigned to {user?.name || 'you'}</p>
@@ -122,7 +122,7 @@ const MyProjects = () => {
               ['Overdue', summary.overdue],
               ['On hold', summary.on_hold]
             ].map(([label, value]) => (
-              <div className="min-w-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" key={label}>
+              <div className="employee-project-kpi min-w-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" key={label}>
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
                 <p className="mt-1 text-2xl font-black text-ink">{value}</p>
               </div>
@@ -135,7 +135,7 @@ const MyProjects = () => {
             const isActive = selectedFilter === option.key;
             return (
               <button
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink'}`}
+                className={`employee-filter-pill rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink'}`}
                 key={option.key}
                 onClick={() => setSelectedFilter(option.key)}
                 type="button"
@@ -159,7 +159,7 @@ const MyProjects = () => {
       ) : (
         <div className="mt-6 grid gap-5 xl:grid-cols-2">
           {filteredProjects.map((project) => (
-            <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" key={project._id}>
+            <article className="employee-project-card overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" key={project._id}>
               <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -188,8 +188,8 @@ const MyProjects = () => {
               </div>
 
               <div className="px-5 pb-5">
-                <div className="mb-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${project.progressPercentage || 0}%` }} />
+                <div className="employee-progress-track mb-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="employee-progress-bar h-full rounded-full bg-brand transition-all" style={{ '--progress': `${project.progressPercentage || 0}%`, width: `${project.progressPercentage || 0}%` }} />
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
                   <p>{project.taskSummary?.completed || 0} of {project.taskSummary?.total || 0} tasks complete</p>

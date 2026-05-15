@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from '../../components/common/Modal.jsx';
+import CelebrationOverlay from '../../components/common/CelebrationOverlay.jsx';
 import PriorityBadge from '../../components/common/PriorityBadge.jsx';
 import SearchFilterBar from '../../components/common/SearchFilterBar.jsx';
 import StatCard from '../../components/common/StatCard.jsx';
@@ -49,7 +50,7 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 	const isBusy = actionBusy === task._id;
 
 	return (
-		<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+		<article className="employee-task-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
 			<div className="flex items-start justify-between gap-3">
 				<div>
 					<h3 className="text-sm font-black text-slate-900">{task.title}</h3>
@@ -65,27 +66,27 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 			</div>
 
 			<div className="mt-4 flex flex-wrap gap-2">
-				<Link className="text-xs font-bold text-blue-700" to={`/employee/tasks/${task._id}`}>View task</Link>
+				<Link className="employee-link text-xs font-bold text-blue-700" to={`/employee/tasks/${task._id}`}>View task</Link>
 
 				{['to_do', 'reopened'].includes(task.status) ? (
-					<button className="text-xs font-bold text-cyan-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'in_progress')} type="button">
+					<button className="employee-link text-xs font-bold text-cyan-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'in_progress')} type="button">
 						Start task
 					</button>
 				) : null}
 
 				{task.status === 'in_progress' ? (
-					<button className="text-xs font-bold text-violet-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'under_review')} type="button">
+					<button className="employee-link text-xs font-bold text-violet-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'under_review')} type="button">
 						Submit for review
 					</button>
 				) : null}
 
 				{task.status === 'under_review' ? (
-					<button className="text-xs font-bold text-emerald-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'completed')} type="button">
+					<button className="employee-link text-xs font-bold text-emerald-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'completed')} type="button">
 						Mark completed
 					</button>
 				) : null}
 
-				<button className="text-xs font-bold text-slate-700" disabled={isBusy} onClick={() => onAddComment(task)} type="button">
+				<button className="employee-link text-xs font-bold text-slate-700" disabled={isBusy} onClick={() => onAddComment(task)} type="button">
 					Add comment
 				</button>
 			</div>
@@ -108,6 +109,7 @@ const MyTasks = () => {
 	const [error, setError] = useState('');
 	const [actionBusy, setActionBusy] = useState('');
 	const [commentModal, setCommentModal] = useState({ open: false, task: null, text: '' });
+	const [celebration, setCelebration] = useState({ active: false, title: '', message: '', variant: 'task' });
 
 	const projectOptions = useMemo(() => projectOptionsFromTasks(tasks), [tasks]);
 
@@ -178,9 +180,18 @@ const MyTasks = () => {
 	const handleStatusChange = async (taskId, status) => {
 		setActionBusy(taskId);
 		setError('');
+		const taskTitle = tasks.find((task) => task._id === taskId)?.title || 'Task';
 
 		try {
 			await taskService.status(taskId, status);
+			if (status === 'completed') {
+				setCelebration({
+					active: true,
+					title: 'Boom! Task Completed',
+					message: `${taskTitle} is done. Great momentum, keep it going!`,
+					variant: 'task'
+				});
+			}
 			await Promise.all([loadTasks(), loadSummary()]);
 		} catch (err) {
 			setError(err.response?.data?.message || 'Unable to update task status.');
@@ -217,7 +228,15 @@ const MyTasks = () => {
 
 	return (
 		<ModulePage title="My Tasks">
-			<section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+			<CelebrationOverlay
+				active={celebration.active}
+				message={celebration.message}
+				onDone={() => setCelebration((current) => ({ ...current, active: false }))}
+				title={celebration.title}
+				variant={celebration.variant}
+			/>
+
+			<section className="employee-tasks-kpi mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 				<StatCard label="Total assigned tasks" value={summaryLoading ? '...' : summary.totalTasks || 0} />
 				<StatCard label="To Do tasks" value={summaryLoading ? '...' : summary.notStartedTasks || 0} />
 				<StatCard label="In Progress tasks" value={summaryLoading ? '...' : summary.inProgressTasks || 0} />
@@ -265,7 +284,7 @@ const MyTasks = () => {
 			) : (
 				<section className="grid gap-4 xl:grid-cols-4">
 					{statusColumns.map((column) => (
-						<div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-3" key={column.key}>
+						<div className="employee-task-column rounded-2xl border border-slate-200 bg-slate-50/50 p-3" key={column.key}>
 							<div className="mb-3 flex items-center justify-between">
 								<h2 className="text-sm font-black uppercase tracking-wide text-slate-800">{column.label}</h2>
 								<span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-600">{tasksByColumn[column.key].length}</span>

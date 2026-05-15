@@ -551,6 +551,9 @@ export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
       status: attendance?.status || 'not_logged_in',
       loginTime: attendance?.loginTime || null,
       logoutTime: attendance?.logoutTime || null,
+      breakStartTime: attendance?.breakStartTime || null,
+      breakEndTime: attendance?.breakEndTime || null,
+      breaks: attendance?.breaks || [],
       totalWorkingHours: attendance?.totalWorkingHours || 0,
       totalBreakMinutes: attendance?.totalBreakMinutes || 0
     },

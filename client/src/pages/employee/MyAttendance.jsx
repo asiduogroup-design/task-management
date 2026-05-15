@@ -46,9 +46,10 @@ const businessDaysInMonth = (year, month) => {
 // ─── sub-components ───────────────────────────────────────────────────────────
 
 const StatusBadge = ({ status }) => {
-  const { label, bg, text } = statusMeta(status);
+  const { label, bg, text, dot } = statusMeta(status);
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${bg} ${text}`}>
+    <span className={`employee-attendance-status inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${bg} ${text}`}>
+      <span className={`employee-status-dot inline-block h-2 w-2 rounded-full ${dot}`} />
       {label}
     </span>
   );
@@ -111,7 +112,7 @@ const AttendanceCalendar = ({ records, year, month, onPrev, onNext }) => {
       </div>
       <div className="mt-1 grid grid-cols-7 gap-1">
         {cells.map((day, idx) => (
-          <div key={idx} className={`flex h-8 items-center justify-center rounded text-xs font-medium ${day ? cellColor(day) : ''}`}>
+          <div key={idx} className={`employee-attendance-day flex h-8 items-center justify-center rounded text-xs font-medium ${day ? cellColor(day) : ''}`}>
             {day || ''}
           </div>
         ))}
@@ -197,19 +198,22 @@ const MyAttendance = () => {
   if (loading) {
     return (
       <DashboardLayout title="My Attendance">
-        <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading attendance…</p>
+        <div className="employee-page employee-attendance-page">
+          <p className="employee-message rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading attendance...</p>
+        </div>
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout title="My Attendance">
+      <div className="employee-page employee-attendance-page">
       {!!error && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       )}
 
       {/* ── 1. Today's Attendance ── */}
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
+      <section className="employee-attendance-card rounded-md border border-slate-200 bg-white p-5 shadow-soft">
         <h3 className="mb-4 text-lg font-bold text-slate-900">Today's Attendance</h3>
         <div className="mb-4">
           <StatusBadge status={todayStatus} />
@@ -239,7 +243,7 @@ const MyAttendance = () => {
         </div>
 
         {/* ── 4. Monthly Summary ── */}
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
+        <section className="employee-attendance-card rounded-md border border-slate-200 bg-white p-5 shadow-soft">
           <h3 className="mb-4 text-lg font-bold text-slate-900">
             Monthly Summary
             <span className="ml-2 text-sm font-normal text-slate-500">{MONTH_NAMES[calMonth]} {calYear}</span>
@@ -253,7 +257,7 @@ const MyAttendance = () => {
               { label: 'Late days',           value: monthlySummary.lateDays,                           dot: 'bg-orange-400' },
               { label: 'Total worked hours',  value: `${monthlySummary.totalWorkedHours.toFixed(2)} h`, dot: 'bg-green-400' },
             ].map(({ label, value, dot }) => (
-              <div key={label} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+              <div key={label} className="employee-attendance-summary-row flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
                 <span className="flex items-center gap-2 text-sm text-slate-700">
                   <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
                   {label}
@@ -266,7 +270,7 @@ const MyAttendance = () => {
       </div>
 
       {/* ── 3. Attendance History Table ── */}
-      <section className="mt-6 rounded-md border border-slate-200 bg-white shadow-soft">
+      <section className="employee-attendance-card mt-6 rounded-md border border-slate-200 bg-white shadow-soft">
         <div className="border-b border-slate-100 px-5 py-4">
           <h3 className="text-lg font-bold text-slate-900">Attendance History</h3>
           <p className="text-sm text-slate-500">All-time attendance records — newest first</p>
@@ -305,6 +309,7 @@ const MyAttendance = () => {
           </table>
         </div>
       </section>
+      </div>
     </DashboardLayout>
   );
 };

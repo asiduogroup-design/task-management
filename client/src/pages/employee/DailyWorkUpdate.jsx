@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import CelebrationOverlay from '../../components/common/CelebrationOverlay.jsx';
 import ModulePage from '../shared/ModulePage.jsx';
 import StatCard from '../../components/common/StatCard.jsx';
 import PriorityBadge from '../../components/common/PriorityBadge.jsx';
@@ -107,6 +108,7 @@ const DailyWorkUpdate = () => {
   const [error, setError] = useState('');
   const [reportId, setReportId] = useState('');
   const [form, setForm] = useState(buildInitialForm(searchParams.get('projectId') || ''));
+  const [celebration, setCelebration] = useState({ active: false, title: '', message: '', variant: 'gratitude' });
 
   const loadData = async () => {
     setLoading(true);
@@ -253,7 +255,13 @@ const DailyWorkUpdate = () => {
       setSuccess(status === 'draft' ? 'Draft saved successfully.' : 'Daily update submitted successfully.');
       await loadData();
       if (status === 'submitted') {
-        setTimeout(() => navigate('/employee/dashboard'), 1000);
+        setCelebration({
+          active: true,
+          title: 'Thank You For Your Contribution',
+          message: 'Your update is submitted. Ribbons unlocked for today\'s effort!',
+          variant: 'gratitude'
+        });
+        setTimeout(() => navigate('/employee/dashboard'), 2200);
       }
     } catch (submitError) {
       setError(submitError.response?.data?.message || 'Unable to save daily update.');
@@ -267,10 +275,17 @@ const DailyWorkUpdate = () => {
 
   return (
     <ModulePage title="Daily Work Update">
+      <CelebrationOverlay
+        active={celebration.active}
+        message={celebration.message}
+        onDone={() => setCelebration((current) => ({ ...current, active: false }))}
+        title={celebration.title}
+        variant={celebration.variant}
+      />
       {error ? <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
       {success ? <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{success}</div> : null}
 
-      <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="employee-daily-kpi mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Date" value={loading ? '...' : new Date(form.reportDate).toLocaleDateString()} />
         <StatCard label="Attendance" value={loading ? '...' : attendanceStatus.replaceAll('_', ' ')} helper={`Login: ${attendanceSummary?.loginTime ? new Date(attendanceSummary.loginTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'} · Logout: ${attendanceSummary?.logoutTime ? new Date(attendanceSummary.logoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}`} />
         <StatCard label="Total working hours" value={loading ? '...' : Number(attendanceSummary?.totalWorkingHours || 0).toFixed(2)} />
@@ -279,7 +294,7 @@ const DailyWorkUpdate = () => {
 
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
         <section className="space-y-6">
-          <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <article className="employee-daily-hero rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">{user?.name || 'Employee'}</p>

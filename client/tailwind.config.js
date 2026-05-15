@@ -3,6 +3,10 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Outfit', 'ui-sans-serif', 'Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['Cormorant Garamond', 'Georgia', 'ui-serif', 'serif'],
+      },
       colors: {
         ink: '#18202f',
         field: '#f4f7fb',

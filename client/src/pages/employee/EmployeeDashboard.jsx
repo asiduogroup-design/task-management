@@ -23,6 +23,32 @@ const prettyTime = (value) => (value ? new Date(value).toLocaleTimeString([], { 
 
 const toTaskStatus = (status = '') => status.replace(/_/g, ' ');
 const employeeOverviewDisabledKey = 'ewms_employee_overview_disabled';
+const priorityRank = { urgent: 4, high: 3, medium: 2, low: 1 };
+
+const toMinutes = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.getHours() * 60 + date.getMinutes();
+};
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const priorityLabel = (priority = 'medium') => {
+  const normalized = String(priority || 'medium').toLowerCase();
+  if (normalized === 'urgent') return 'Urgent';
+  if (normalized === 'high') return 'High';
+  if (normalized === 'low') return 'Low';
+  return 'Medium';
+};
+
+const priorityToneClass = (priority = 'medium') => {
+  const normalized = String(priority || 'medium').toLowerCase();
+  if (normalized === 'urgent') return 'employee-priority-urgent';
+  if (normalized === 'high') return 'employee-priority-high';
+  if (normalized === 'low') return 'employee-priority-low';
+  return 'employee-priority-medium';
+};
 
 const isSameDate = (left, right) => {
   const l = new Date(left);
@@ -74,6 +100,9 @@ const EmployeeDashboard = () => {
         status: attendanceRecord?.status || attendanceRes.data?.status || 'not_logged_in',
         loginTime: attendanceRecord?.loginTime || null,
         logoutTime: attendanceRecord?.logoutTime || null,
+        breakStartTime: attendanceRecord?.breakStartTime || null,
+        breakEndTime: attendanceRecord?.breakEndTime || null,
+        breaks: attendanceRecord?.breaks || [],
         totalWorkingHours: attendanceRecord?.totalWorkingHours || 0,
         totalBreakMinutes: attendanceRecord?.totalBreakMinutes || 0
       },
@@ -181,6 +210,70 @@ const EmployeeDashboard = () => {
     };
   }, [data?.todayTasks]);
 
+  const sortedTodayTasks = useMemo(() => {
+    const list = [...(data?.todayTasks || [])];
+    return list.sort((left, right) => {
+      const leftRank = priorityRank[String(left.priority || '').toLowerCase()] || 0;
+      const rightRank = priorityRank[String(right.priority || '').toLowerCase()] || 0;
+      if (leftRank !== rightRank) return rightRank - leftRank;
+      const leftDeadline = left.deadline ? new Date(left.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+      const rightDeadline = right.deadline ? new Date(right.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+      return leftDeadline - rightDeadline;
+    });
+  }, [data?.todayTasks]);
+
+  const attendanceGraph = useMemo(() => {
+    const loginMin = toMinutes(attendance.loginTime);
+    const logoutMin = toMinutes(attendance.logoutTime);
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    if (loginMin == null) return null;
+
+    // The total span is strictly login → logout (or now)
+    const endMin = logoutMin != null ? logoutMin : Math.max(loginMin + 1, nowMin);
+    const totalSpan = Math.max(1, endMin - loginMin);
+
+    // Convert an absolute minute value to a % within the login→end bar
+    const pct = (min) => clamp(((min - loginMin) / totalSpan) * 100, 0, 100);
+
+    // Collect break segments from breaks[] array
+    const rawBreaks = Array.isArray(attendance.breaks) ? attendance.breaks : [];
+    const breakSegs = rawBreaks
+      .map((item) => ({ start: toMinutes(item.startTime), end: toMinutes(item.endTime) }))
+      .filter((item) => item.start != null && item.end != null && item.end > item.start);
+
+    // Also handle an open (current) break
+    const openStart = toMinutes(attendance.breakStartTime);
+    const openEnd = toMinutes(attendance.breakEndTime);
+    if (openStart != null && openStart >= loginMin) {
+      const resolvedEnd = (openEnd != null && openEnd > openStart)
+        ? openEnd
+        : currentStatus === 'on_break' ? Math.min(nowMin, endMin) : null;
+      if (resolvedEnd != null && resolvedEnd > openStart) {
+        breakSegs.push({ start: openStart, end: resolvedEnd });
+      }
+    }
+
+    const breakPct = breakSegs.map((seg) => ({
+      left: pct(seg.start),
+      width: Math.max(1, pct(seg.end) - pct(seg.start))
+    }));
+
+    const totalBreakMin = breakSegs.reduce((sum, seg) => sum + (seg.end - seg.start), 0);
+    const totalWorkMin = totalSpan - totalBreakMin;
+
+    return {
+      loginTime: prettyTime(attendance.loginTime),
+      logoutTime: logoutMin != null ? prettyTime(attendance.logoutTime) : prettyTime(new Date()),
+      logoutLabel: logoutMin != null ? 'Logout' : 'Now',
+      isLive: logoutMin == null,
+      totalWorkMin,
+      totalBreakMin,
+      breakPct,
+    };
+  }, [attendance.breakEndTime, attendance.breakStartTime, attendance.breaks, attendance.loginTime, attendance.logoutTime, currentStatus]);
+
   const runAttendanceAction = async (kind) => {
     setActionBusy(kind);
     setMessage('');
@@ -257,45 +350,89 @@ const EmployeeDashboard = () => {
   if (loading && !data) {
     return (
       <DashboardLayout title="Daily overview">
-        <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading dashboard...</p>
+        <div className="employee-page employee-dashboard-page">
+          <p className="employee-message rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading dashboard...</p>
+        </div>
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout title="Daily work overview">
-      {!!message && <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{message}</div>}
+      <div className="employee-page employee-dashboard-page">
+        {!!message && <div className="employee-message mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{message}</div>}
 
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-        <h2 className="text-lg font-bold text-ink">Welcome Section</h2>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Employee name</p>
-            <p className="font-semibold text-ink">{data?.welcome?.employeeName || user?.name || '-'}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Current date</p>
-            <p className="font-semibold text-ink">{prettyDate(data?.welcome?.currentDate || new Date())}</p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Current status</p>
-            <p className="font-semibold text-ink">{statusLabel[currentStatus] || currentStatus}</p>
-          </div>
-        </div>
-      </section>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-md border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Today's tasks</p>
-          <p className="mt-1 text-2xl font-black text-ink">{taskStats.total}</p>
+      {/* Modern Welcome + KPI Row */}
+
+      <div className="employee-dashboard-header-row">
+        <div className="employee-dashboard-greeting">
+          <h1 className="employee-dashboard-greeting-title">
+            Good morning, {data?.welcome?.employeeName || user?.name || '-'} <span className="employee-dashboard-wave">👋</span>
+          </h1>
+          <div className="employee-dashboard-greeting-sub">Here's what's happening today, {prettyDate(data?.welcome?.currentDate || new Date())}.</div>
         </div>
-        <div className="rounded-md border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">In progress</p>
-          <p className="mt-1 text-2xl font-black text-ink">{taskStats.inProgress}</p>
+      </div>
+
+
+      <div className="employee-dashboard-kpi-row">
+        {/* Active Tasks */}
+        <div className="employee-kpi-card employee-kpi-active">
+          <span className="employee-kpi-icon employee-kpi-icon-active">
+            {/* Outlined clipboard with check, larger and more accurate */}
+            <svg width="38" height="38" fill="none" viewBox="0 0 38 38">
+              <rect x="7" y="7" width="24" height="24" rx="8" fill="#EEF4FF"/>
+              <rect x="14" y="13" width="12" height="14" rx="3" stroke="#2563eb" strokeWidth="2"/>
+              <rect x="17" y="10.5" width="6" height="3" rx="1.5" stroke="#2563eb" strokeWidth="1.5"/>
+              <path d="M17.8 22.5l2.2 2.2 4-4" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <div className="employee-kpi-main">{taskStats.total}</div>
+          <div className="employee-kpi-label">Active Tasks</div>
+          <span className="employee-kpi-trend" style={{ color: '#2563eb' }}>{taskStats.total > 0 ? `↗ +${taskStats.total}` : '↗ 0'}</span>
         </div>
-        <div className="rounded-md border border-slate-200 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Completed</p>
-          <p className="mt-1 text-2xl font-black text-ink">{taskStats.completed}</p>
+        {/* Completed */}
+        <div className="employee-kpi-card employee-kpi-completed">
+          <span className="employee-kpi-icon employee-kpi-icon-completed">
+            {/* Outlined check in circle, larger */}
+            <svg width="38" height="38" fill="none" viewBox="0 0 38 38">
+              <rect x="7" y="7" width="24" height="24" rx="8" fill="#E6FBF4"/>
+              <circle cx="19" cy="19" r="7" stroke="#059669" strokeWidth="2" fill="none"/>
+              <path d="M16.5 19.5l2 2 3.5-3.5" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <div className="employee-kpi-main">{taskStats.completed}</div>
+          <div className="employee-kpi-label">Completed</div>
+          <span className="employee-kpi-trend" style={{ color: '#059669' }}>{taskStats.completed > 0 ? `↗ +${taskStats.completed}` : '↗ 0'}</span>
+        </div>
+        {/* In Review */}
+        <div className="employee-kpi-card employee-kpi-review">
+          <span className="employee-kpi-icon employee-kpi-icon-review">
+            {/* Outlined clock icon, larger */}
+            <svg width="38" height="38" fill="none" viewBox="0 0 38 38">
+              <rect x="7" y="7" width="24" height="24" rx="8" fill="#E6F0FB"/>
+              <circle cx="19" cy="19" r="7" stroke="#2563eb" strokeWidth="2" fill="none"/>
+              <path d="M19 15.5v4l2.2 1.5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </span>
+          <div className="employee-kpi-main">5</div>
+          <div className="employee-kpi-label">In Review</div>
+          <span className="employee-kpi-trend" style={{ color: '#2563eb' }}>↗ +5</span>
+        </div>
+        {/* Overdue */}
+        <div className="employee-kpi-card employee-kpi-overdue">
+          <span className="employee-kpi-icon employee-kpi-icon-overdue">
+            {/* Outlined alert in circle, larger */}
+            <svg width="38" height="38" fill="none" viewBox="0 0 38 38">
+              <rect x="7" y="7" width="24" height="24" rx="8" fill="#FEEEEF"/>
+              <circle cx="19" cy="19" r="7" stroke="#e11d48" strokeWidth="2" fill="none"/>
+              <circle cx="19" cy="22" r="1.3" fill="#e11d48"/>
+              <path d="M19 16v3" stroke="#e11d48" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </span>
+          <div className="employee-kpi-main">2</div>
+          <div className="employee-kpi-label">Overdue</div>
+          <span className="employee-kpi-trend" style={{ color: '#e11d48' }}>↗ +2</span>
         </div>
       </div>
 
@@ -303,27 +440,88 @@ const EmployeeDashboard = () => {
         <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
           <h3 className="text-lg font-bold text-ink">Login / Logout Section</h3>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button className="btn-primary" disabled={actionBusy === 'login' || ['logged_in', 'on_break', 'logged_out', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('login')} type="button">Login</button>
-            <button className="btn-secondary" disabled={actionBusy === 'logout' || !['logged_in', 'on_break', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('logout')} type="button">Logout</button>
-            <button className="btn-secondary" disabled={actionBusy === 'breakStart' || !['logged_in', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('breakStart')} type="button">Break start</button>
-            <button className="btn-secondary" disabled={actionBusy === 'breakEnd' || currentStatus !== 'on_break'} onClick={() => runAttendanceAction('breakEnd')} type="button">Break end</button>
+            <button className="btn-primary employee-attendance-action employee-attendance-login" disabled={actionBusy === 'login' || ['logged_in', 'on_break', 'logged_out', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('login')} type="button">Login</button>
+            <button className="btn-secondary employee-attendance-action employee-attendance-logout" disabled={actionBusy === 'logout' || !['logged_in', 'on_break', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('logout')} type="button">Logout</button>
+            <button className="btn-secondary employee-attendance-action employee-attendance-break" disabled={actionBusy === 'breakStart' || !['logged_in', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('breakStart')} type="button">Break start</button>
+            <button className="btn-secondary employee-attendance-action employee-attendance-break-end" disabled={actionBusy === 'breakEnd' || currentStatus !== 'on_break'} onClick={() => runAttendanceAction('breakEnd')} type="button">Break end</button>
           </div>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live status: <span className="employee-live-status">{statusLabel[currentStatus] || currentStatus}</span></p>
           <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
             <p><span className="text-slate-500">Today's login time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.loginTime)}</span></p>
             <p><span className="text-slate-500">Today's logout time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.logoutTime)}</span></p>
             <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{Number(attendance.totalWorkingHours || 0).toFixed(2)}</span></p>
           </div>
+          {attendanceGraph && (
+            <div className="employee-attendance-graph mt-4">
+              <p className="employee-attendance-graph-title">Day activity graph</p>
+
+              {/* ── Bar ── */}
+              <div className="employee-attendance-bar-track" role="img" aria-label="Login to logout timeline">
+                {/* work fill (whole bar = blue) */}
+                <span className="employee-attendance-bar-work" />
+                {/* break overlays (amber) */}
+                {attendanceGraph.breakPct.map((seg, index) => (
+                  <span
+                    className="employee-attendance-bar-break"
+                    key={`break-${index}`}
+                    style={{ left: `${seg.left}%`, width: `${seg.width}%` }}
+                  />
+                ))}
+                {/* live pulse at right edge when not logged out */}
+                {attendanceGraph.isLive && <span className="employee-attendance-bar-live" />}
+              </div>
+
+              {/* ── Time labels ── */}
+              <div className="employee-attendance-bar-labels">
+                <span className="employee-attendance-bar-label-login">
+                  <span className="employee-attendance-label-dot employee-attendance-label-dot-login" />
+                  Login · {attendanceGraph.loginTime}
+                </span>
+                <span className="employee-attendance-bar-label-logout">
+                  {attendanceGraph.logoutLabel} · {attendanceGraph.logoutTime}
+                  <span className="employee-attendance-label-dot employee-attendance-label-dot-logout" />
+                </span>
+              </div>
+
+              {/* ── Legend ── */}
+              <div className="employee-attendance-bar-legend">
+                <span className="employee-attendance-legend-chip employee-attendance-legend-work">
+                  <span className="employee-attendance-legend-swatch employee-attendance-legend-work-swatch" />
+                  Work · {attendanceGraph.totalWorkMin}m
+                </span>
+                {attendanceGraph.totalBreakMin > 0 && (
+                  <span className="employee-attendance-legend-chip employee-attendance-legend-break">
+                    <span className="employee-attendance-legend-swatch employee-attendance-legend-break-swatch" />
+                    Break · {attendanceGraph.totalBreakMin}m
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Today's Tasks</h3>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-ink">Today's Tasks</h3>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Sorted by priority first</p>
+            </div>
+            <div className="employee-priority-legend" aria-label="Priority legend">
+              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-urgent" />Urgent</span>
+              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-high" />High</span>
+              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-medium" />Medium</span>
+              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-low" />Low</span>
+            </div>
+          </div>
           <div className="mt-4 space-y-3">
-            {(data?.todayTasks || []).length === 0 && <p className="text-sm text-slate-500">No tasks assigned.</p>}
-            {(data?.todayTasks || []).map((task) => (
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3" key={task._id}>
-                <p className="font-semibold text-ink">{task.title}</p>
+            {sortedTodayTasks.length === 0 && <p className="text-sm text-slate-500">No tasks assigned.</p>}
+            {sortedTodayTasks.map((task) => (
+              <div className={`employee-priority-card rounded-md border border-slate-100 bg-slate-50 p-3 ${priorityToneClass(task.priority)}`} key={task._id}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="font-semibold text-ink">{task.title}</p>
+                  <span className={`employee-priority-pill ${priorityToneClass(task.priority)}`}>{priorityLabel(task.priority)}</span>
+                </div>
                 <p className="text-sm text-slate-600">Project: {task.projectName}</p>
-                <p className="text-sm text-slate-600">Priority: {task.priority}</p>
                 <p className="text-sm text-slate-600">Deadline: {prettyDate(task.deadline)}</p>
                 <p className="text-sm capitalize text-slate-600">Status: {toTaskStatus(task.status)}</p>
               </div>
@@ -362,7 +560,7 @@ const EmployeeDashboard = () => {
               {(data?.todos?.personal || []).map((todo) => (
                 <div className="mt-2 flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm" key={todo._id}>
                   <span>{todo.title}</span>
-                  <button className="text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
+                  <button className="employee-link text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
                 </div>
               ))}
             </div>
@@ -372,7 +570,7 @@ const EmployeeDashboard = () => {
               {(data?.todos?.project || []).map((todo) => (
                 <div className="mt-2 flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm" key={todo._id}>
                   <span>{todo.title} {todo.projectId?.name ? `(${todo.projectId.name})` : ''}</span>
-                  <button className="text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
+                  <button className="employee-link text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
                 </div>
               ))}
             </div>
@@ -382,7 +580,7 @@ const EmployeeDashboard = () => {
               {(data?.todos?.task || []).map((todo) => (
                 <div className="mt-2 flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm" key={todo._id}>
                   <span>{todo.title} {todo.taskId?.title ? `(${todo.taskId.title})` : ''}</span>
-                  <button className="text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
+                  <button className="employee-link text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
                 </div>
               ))}
             </div>
@@ -435,6 +633,7 @@ const EmployeeDashboard = () => {
             </div>
           </div>
         </section>
+      </div>
       </div>
     </DashboardLayout>
   );

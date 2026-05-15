@@ -4,10 +4,16 @@ import Sidebar from './Sidebar.jsx';
 
 const DashboardLayout = ({ title, children }) => {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <main className="min-h-screen bg-slate-100 md:flex">
-      <Sidebar open={open} onClose={() => setOpen(false)} />
+      <Sidebar
+        collapsed={collapsed}
+        open={open}
+        onClose={() => setOpen(false)}
+        onToggleCollapse={() => setCollapsed((value) => !value)}
+      />
       {open && <button aria-label="Close menu" className="fixed inset-0 z-30 bg-slate-950/30 md:hidden" type="button" onClick={() => setOpen(false)} />}
       <section className="min-w-0 flex-1">
         <Navbar onMenu={() => setOpen(true)} />

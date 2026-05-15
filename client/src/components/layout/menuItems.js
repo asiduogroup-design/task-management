@@ -1,46 +1,46 @@
 export const superAdminMenu = [
-  ['Dashboard', '/admin/dashboard'],
-  ['Employees', '/admin/employees'],
-  ['Attendance', '/admin/attendance'],
-  ['Projects', '/admin/projects'],
-  ['Tasks', '/admin/tasks'],
-  ['Daily Work Reports', '/admin/daily-work-reports'],
-  ['Leave Management', '/admin/leaves'],
-  ['Reports', '/admin/reports'],
-  ['Notifications', '/admin/notifications'],
-  ['Settings', '/admin/settings']
+  ['Dashboard', '/admin/dashboard', 'dashboard'],
+  ['Employees', '/admin/employees', 'employees'],
+  ['Attendance', '/admin/attendance', 'attendance'],
+  ['Projects', '/admin/projects', 'projects'],
+  ['Tasks', '/admin/tasks', 'tasks'],
+  ['Daily Work Reports', '/admin/daily-work-reports', 'dailyReports'],
+  ['Leave Management', '/admin/leaves', 'leaveManagement'],
+  ['Reports', '/admin/reports', 'reports'],
+  ['Notifications', '/admin/notifications', 'notifications'],
+  ['Settings', '/admin/settings', 'settings']
 ];
 
 export const adminMenu = [
-  ['Dashboard', '/admin/dashboard'],
-  ['Employees', '/admin/employees'],
-  ['Attendance', '/admin/attendance'],
-  ['Leave Management', '/admin/leaves'],
-  ['Reports', '/admin/reports'],
-  ['Notifications', '/admin/notifications']
+  ['Dashboard', '/admin/dashboard', 'dashboard'],
+  ['Employees', '/admin/employees', 'employees'],
+  ['Attendance', '/admin/attendance', 'attendance'],
+  ['Leave Management', '/admin/leaves', 'leaveManagement'],
+  ['Reports', '/admin/reports', 'reports'],
+  ['Notifications', '/admin/notifications', 'notifications']
 ];
 
 export const employeeMenu = [
-  ['Dashboard', '/employee/dashboard'],
-  ['My Attendance', '/employee/attendance'],
-  ['My Projects', '/employee/projects'],
-  ['My Tasks', '/employee/tasks'],
-  ['Todo List', '/employee/todos'],
-  ['Daily Work Update', '/employee/daily-update'],
-  ['Completed Tasks', '/employee/completed-tasks'],
-  ['Leave Request', '/employee/leaves'],
-  ['Profile', '/employee/profile'],
-  ['Notifications', '/employee/notifications']
+  ['Dashboard', '/employee/dashboard', 'dashboard'],
+  ['My Attendance', '/employee/attendance', 'attendance'],
+  ['My Projects', '/employee/projects', 'projects'],
+  ['My Tasks', '/employee/tasks', 'tasks'],
+  ['Todo List', '/employee/todos', 'todoList'],
+  ['Daily Work Update', '/employee/daily-update', 'dailyUpdate'],
+  ['Completed Tasks', '/employee/completed-tasks', 'completedTasks'],
+  ['Leave Request', '/employee/leaves', 'leaveRequest'],
+  ['Profile', '/employee/profile', 'profile'],
+  ['Notifications', '/employee/notifications', 'notifications']
 ];
 
 export const managerMenu = [
-  ['Dashboard', '/manager/dashboard'],
-  ['Assigned Projects', '/manager/projects'],
-  ['Project Tasks', '/manager/tasks'],
-  ['Team Members', '/manager/team-members'],
-  ['Daily Updates', '/manager/daily-updates'],
-  ['Review Tasks', '/manager/review-tasks'],
-  ['Notifications', '/manager/notifications']
+  ['Dashboard', '/manager/dashboard', 'dashboard'],
+  ['Assigned Projects', '/manager/projects', 'projects'],
+  ['Project Tasks', '/manager/tasks', 'tasks'],
+  ['Team Members', '/manager/team-members', 'teamMembers'],
+  ['Daily Updates', '/manager/daily-updates', 'dailyUpdate'],
+  ['Review Tasks', '/manager/review-tasks', 'reviewTasks'],
+  ['Notifications', '/manager/notifications', 'notifications']
 ];
 
 export const menuForRole = (role) => {

@@ -297,14 +297,12 @@ const EmployeeDashboard = () => {
       .map((item) => ({ start: toMinutes(item.startTime), end: toMinutes(item.endTime) }))
       .filter((item) => item.start != null && item.end != null && item.end > item.start);
 
-    // Also handle an open (current) break
+    // Only handle a LIVE (open) break — completed breaks are already in breaks[] above.
+    // Using breakEndTime here would double-count the same break.
     const openStart = toMinutes(attendance.breakStartTime);
-    const openEnd = toMinutes(attendance.breakEndTime);
-    if (openStart != null && openStart >= loginMin) {
-      const resolvedEnd = (openEnd != null && openEnd > openStart)
-        ? openEnd
-        : currentStatus === 'on_break' ? Math.min(nowMin, endMin) : null;
-      if (resolvedEnd != null && resolvedEnd > openStart) {
+    if (openStart != null && openStart >= loginMin && currentStatus === 'on_break') {
+      const resolvedEnd = Math.min(nowMin, endMin);
+      if (resolvedEnd > openStart) {
         breakSegs.push({ start: openStart, end: resolvedEnd });
       }
     }
@@ -315,7 +313,7 @@ const EmployeeDashboard = () => {
     }));
 
     const totalBreakMin = breakSegs.reduce((sum, seg) => sum + (seg.end - seg.start), 0);
-    const totalWorkMin = totalSpan - totalBreakMin;
+    const totalWorkMin = Math.max(0, totalSpan - totalBreakMin);
 
     return {
       loginTime: prettyTime(attendance.loginTime),
@@ -326,7 +324,7 @@ const EmployeeDashboard = () => {
       totalBreakMin,
       breakPct,
     };
-  }, [attendance.breakEndTime, attendance.breakStartTime, attendance.breaks, attendance.loginTime, attendance.logoutTime, currentStatus]);
+  }, [attendance.breakStartTime, attendance.breaks, attendance.loginTime, attendance.logoutTime, currentStatus]);
 
   const runAttendanceAction = async (kind) => {
     setActionBusy(kind);

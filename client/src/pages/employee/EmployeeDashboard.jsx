@@ -25,7 +25,18 @@ const statusLabel = {
 };
 
 const prettyDate = (value) => (value ? new Date(value).toLocaleDateString() : '-');
+
 const prettyTime = (value) => (value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-');
+
+// Format minutes as 'X hrs Y mins'
+const formatMinutesToHoursMins = (mins) => {
+  const m = Number(mins) || 0;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h > 0 && rem > 0) return `${h}hrs ${rem} mins`;
+  if (h > 0) return `${h}hrs`;
+  return `${rem} mins`;
+};
 
 const employeeOverviewDisabledKey = 'ewms_employee_overview_disabled';
 const priorityRank = { urgent: 4, high: 3, medium: 2, low: 1 };
@@ -630,7 +641,7 @@ const EmployeeDashboard = () => {
             <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
               <p><span className="text-slate-500">Today's login time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.loginTime)}</span></p>
               <p><span className="text-slate-500">Today's logout time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.logoutTime)}</span></p>
-              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{Number(attendance.totalWorkingHours || 0).toFixed(2)}</span></p>
+              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{formatMinutesToHoursMins(attendance.totalWorkingHours)}</span></p>
             </div>
             {attendanceGraph && (
             <div className="employee-attendance-graph mt-4">
@@ -668,7 +679,7 @@ const EmployeeDashboard = () => {
               <div className="employee-attendance-bar-legend">
                 <span className="employee-attendance-legend-chip employee-attendance-legend-work">
                   <span className="employee-attendance-legend-swatch employee-attendance-legend-work-swatch" />
-                  Work · {attendanceGraph.totalWorkMin}m
+                  Work · {formatMinutesToHoursMins(attendanceGraph.totalWorkMin)}
                 </span>
                 {attendanceGraph.totalBreakMin > 0 && (
                   <span className="employee-attendance-legend-chip employee-attendance-legend-break">

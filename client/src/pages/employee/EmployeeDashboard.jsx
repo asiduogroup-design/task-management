@@ -14,7 +14,6 @@ import { dashboardService } from '../../services/dashboardService.js';
 import { notificationService } from '../../services/notificationService.js';
 import { projectService } from '../../services/projectService.js';
 import { taskService } from '../../services/taskService.js';
-import { todoService } from '../../services/todoService.js';
 
 const statusLabel = {
   not_logged_in: 'Not logged in',
@@ -30,6 +29,44 @@ const prettyTime = (value) => (value ? new Date(value).toLocaleTimeString([], { 
 
 const employeeOverviewDisabledKey = 'ewms_employee_overview_disabled';
 const priorityRank = { urgent: 4, high: 3, medium: 2, low: 1 };
+const employeeNotificationSections = [
+  {
+    key: 'deadline_reminder',
+    title: 'Deadline Reminders',
+    subtypes: ['task_deadline_reminder', 'task_deadline_approaching', 'project_deadline_approaching', 'project_deadline_update', 'deadline_reminder'],
+    toneClass: 'employee-notification-dot-deadline'
+  },
+  {
+    key: 'admin_comments',
+    title: 'Admin Comments',
+    subtypes: ['leave_admin_remarks', 'task_comment_added', 'admin_comment', 'manager_comment', 'comment_added'],
+    toneClass: 'employee-notification-dot-admin'
+  },
+  {
+    key: 'task',
+    title: 'Task Notifications',
+    subtypes: ['task_assigned', 'task_deadline_reminder', 'task_comment_added', 'task_approved', 'task_reopened'],
+    toneClass: 'employee-notification-dot-task'
+  },
+  {
+    key: 'project',
+    title: 'Project Notifications',
+    subtypes: ['project_added', 'project_deadline_update', 'project_status_changed'],
+    toneClass: 'employee-notification-dot-muted'
+  },
+  {
+    key: 'attendance',
+    title: 'Attendance Notifications',
+    subtypes: ['missing_logout_reminder', 'late_login_notice', 'daily_update_reminder'],
+    toneClass: 'employee-notification-dot-muted'
+  },
+  {
+    key: 'leave',
+    title: 'Leave Notifications',
+    subtypes: ['leave_approved', 'leave_rejected', 'leave_admin_remarks'],
+    toneClass: 'employee-notification-dot-muted'
+  }
+];
 
 const toMinutes = (value) => {
   if (!value) return null;
@@ -94,27 +131,42 @@ const businessDaysInMonth = (year, month) => {
 };
 
 const EmployeeDashboard = () => {
-  // Monthly summary state (same source and calculation as MyAttendance page)
+
+  // Weekly summary state
   const [weekSummary, setWeekSummary] = useState(null);
 
-  const loadMonthlySummary = async () => {
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - day); // Sunday as start
+    return d;
+  };
+
+  const getEndOfWeek = (date) => {
+    const d = getStartOfWeek(date);
+    d.setDate(d.getDate() + 7);
+    return d;
+  };
+
+  const loadWeeklySummary = async () => {
     const res = await attendanceService.history();
     const records = res.data?.records || [];
     const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
+    const weekStart = getStartOfWeek(now);
+    const weekEnd = getEndOfWeek(now);
 
-    const monthRecords = records.filter((item) => {
+    const weekRecords = records.filter((item) => {
       const itemDate = new Date(item.date);
-      return !Number.isNaN(itemDate.getTime()) && itemDate.getFullYear() === year && itemDate.getMonth() === month;
+      return !Number.isNaN(itemDate.getTime()) && itemDate >= weekStart && itemDate < weekEnd;
     });
 
-    const present = monthRecords.filter((r) => isPresentStatus(r.status)).length;
-    const leaves = monthRecords.filter((r) => r.status === 'on_leave').length;
-    const absents = monthRecords.filter((r) => r.status === 'absent').length;
-    const lateDays = monthRecords.filter((r) => r.status === 'late').length;
-    const workingHours = monthRecords.reduce((sum, r) => sum + Number(r.totalWorkingHours || 0), 0);
-    const totalDays = businessDaysInMonth(year, month);
+    const present = weekRecords.filter((r) => isPresentStatus(r.status)).length;
+    const leaves = weekRecords.filter((r) => r.status === 'on_leave').length;
+    const absents = weekRecords.filter((r) => r.status === 'absent').length;
+    const lateDays = weekRecords.filter((r) => r.status === 'late').length;
+    const workingHours = weekRecords.reduce((sum, r) => sum + Number(r.totalWorkingHours || 0), 0);
+    const totalDays = 7;
 
     setWeekSummary({
       present,
@@ -124,21 +176,19 @@ const EmployeeDashboard = () => {
       workingHours: Number(workingHours.toFixed(2)),
       totalDays,
       maxWorkingHours: totalDays * 8,
-      monthLabel: new Date(year, month, 1).toLocaleString([], { month: 'long', year: 'numeric' })
+      weekLabel: `${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} - ${new Date(weekEnd - 1).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
     });
   };
 
-  // Fetch monthly summary on mount
+  // Fetch weekly summary on mount
   useEffect(() => {
-    loadMonthlySummary()
+    loadWeeklySummary()
       .catch(() => setWeekSummary(null));
   }, []);
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionBusy, setActionBusy] = useState('');
-  const [todoTitle, setTodoTitle] = useState('');
-  const [todoDescription, setTodoDescription] = useState('');
   const [dailyForm, setDailyForm] = useState({
     workDescription: '',
     timeSpent: '',
@@ -149,11 +199,10 @@ const EmployeeDashboard = () => {
   const [checkedTaskIds, setCheckedTaskIds] = useState(() => new Set());
 
   const buildFallbackDashboard = async () => {
-    const [attendanceRes, tasksRes, projectsRes, todosRes, updatesRes, notificationsRes] = await Promise.all([
+    const [attendanceRes, tasksRes, projectsRes, updatesRes, notificationsRes] = await Promise.all([
       attendanceService.today(),
       taskService.list(),
       projectService.list(),
-      todoService.list(),
       dailyUpdateService.list(),
       notificationService.list()
     ]);
@@ -162,7 +211,6 @@ const EmployeeDashboard = () => {
     const attendanceRecord = attendanceRes.data?.attendance;
     const tasks = tasksRes.data?.tasks || [];
     const projects = projectsRes.data?.projects || [];
-    const todos = todosRes.data?.todos || [];
     const notifications = notificationsRes.data?.notifications || [];
     const updates = updatesRes.data?.updates || [];
 
@@ -207,12 +255,6 @@ const EmployeeDashboard = () => {
           completedTasks: completed
         };
       }),
-      todos: {
-        all: todos,
-        personal: todos.filter((todo) => !todo.projectId && !todo.taskId),
-        project: todos.filter((todo) => todo.projectId && !todo.taskId),
-        task: todos.filter((todo) => todo.taskId)
-      },
       todayWorkUpdate: todayUpdate,
       notifications: {
         all: notifications,
@@ -323,6 +365,63 @@ const EmployeeDashboard = () => {
     };
   }, [data?.assignedProjects, data?.todayTasks]);
 
+  const notificationCards = useMemo(() => {
+    const notifications = data?.notifications || {};
+    const fallbackList = [
+      ...(notifications.newTaskAssigned || []),
+      ...(notifications.deadlineReminder || []),
+      ...(notifications.adminComments || []),
+      ...(notifications.projectUpdates || []),
+      ...(notifications.attendanceUpdates || []),
+      ...(notifications.leaveUpdates || [])
+    ];
+
+    const allNotifications = (notifications.all && notifications.all.length > 0)
+      ? notifications.all
+      : fallbackList;
+
+    const grouped = employeeNotificationSections.reduce((accumulator, section) => ({ ...accumulator, [section.key]: [] }), {});
+
+    allNotifications.forEach((notification) => {
+      const lowerMsg = String(notification?.message || '').toLowerCase();
+
+      const section =
+        employeeNotificationSections.find((item) => item.subtypes.includes(notification?.subtype))
+        || ((lowerMsg.includes('due') || lowerMsg.includes('deadline'))
+          ? employeeNotificationSections.find((item) => item.key === 'deadline_reminder')
+          : null)
+        || ((notification?.type === 'system' || notification?.type === 'daily_update' || lowerMsg.includes('comment'))
+          ? employeeNotificationSections.find((item) => item.key === 'admin_comments')
+          : null)
+        || employeeNotificationSections.find((item) => item.key === notification?.type)
+        || (notification?.type === 'daily_update' ? employeeNotificationSections.find((item) => item.key === 'attendance') : null);
+
+      if (section) {
+        grouped[section.key].push(notification);
+      }
+    });
+
+    return employeeNotificationSections.map((section) => ({
+      key: section.key,
+      title: section.title,
+      toneClass: section.toneClass,
+      count: (grouped[section.key] || []).length,
+      message: (grouped[section.key] || [])[0]?.message || 'No alerts in this section.'
+    }));
+  }, [data?.notifications]);
+
+  const unreadCount = useMemo(() => {
+    const list = data?.notifications?.all || [];
+    if (list.length === 0) return 0;
+
+    const hasReadMeta = list.some((item) => typeof item?.isRead === 'boolean' || typeof item?.read === 'boolean' || item?.readAt);
+    if (!hasReadMeta) {
+      return list.slice(0, 4).length;
+    }
+
+    return list.filter((item) => item?.isRead === false || item?.read === false || !item?.readAt).length;
+  }, [data?.notifications?.all]);
+
   const toggleTaskChecked = (taskId) => {
     setCheckedTaskIds((current) => {
       const next = new Set(current);
@@ -396,43 +495,9 @@ const EmployeeDashboard = () => {
       if (kind === 'breakStart') await attendanceService.breakStart();
       if (kind === 'breakEnd') await attendanceService.breakEnd();
       await loadDashboard();
-      await loadMonthlySummary();
+      await loadWeeklySummary();
     } catch (error) {
       setMessage(error?.response?.data?.message || 'Attendance action failed.');
-    } finally {
-      setActionBusy('');
-    }
-  };
-
-  const addTodo = async (event) => {
-    event.preventDefault();
-    if (!todoTitle.trim()) return;
-    setActionBusy('addTodo');
-    setMessage('');
-    try {
-      await todoService.create({
-        title: todoTitle.trim(),
-        description: todoDescription.trim(),
-        status: 'pending'
-      });
-      setTodoTitle('');
-      setTodoDescription('');
-      await loadDashboard();
-    } catch (error) {
-      setMessage(error?.response?.data?.message || 'Unable to add todo.');
-    } finally {
-      setActionBusy('');
-    }
-  };
-
-  const completeTodo = async (id) => {
-    setActionBusy(`todo-${id}`);
-    setMessage('');
-    try {
-      await todoService.status(id, 'completed');
-      await loadDashboard();
-    } catch (error) {
-      setMessage(error?.response?.data?.message || 'Unable to update todo.');
     } finally {
       setActionBusy('');
     }
@@ -619,8 +684,8 @@ const EmployeeDashboard = () => {
           {/* Summary Card */}
           <div className="flex-1 min-w-[320px] flex items-center">
             <div className="w-full rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
-              <h4 className="text-base font-bold mb-2 text-ink">Monthly Summary</h4>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{weekSummary?.monthLabel || ''}</p>
+              <h4 className="text-base font-bold mb-2 text-ink">This Week's Attendance</h4>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{weekSummary?.weekLabel || ''}</p>
               {!weekSummary ? (
                 <div className="text-slate-400 text-sm">Loading...</div>
               ) : (
@@ -680,25 +745,31 @@ const EmployeeDashboard = () => {
 
               <div className="mt-4 space-y-1">
                 {sortedTodayTasks.length === 0 && <p className="text-sm text-slate-500">No tasks assigned.</p>}
-                {sortedTodayTasks.slice(0, 4).map((task, index) => (
-                  <article className="employee-today-row" key={task._id}>
-                    <input
-                      aria-label={`Mark task ${task.title} as checked`}
-                      checked={checkedTaskIds.has(task._id)}
-                      className="employee-today-check"
-                      onChange={() => toggleTaskChecked(task._id)}
-                      type="checkbox"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-[1.05rem] font-semibold text-slate-950">{task.title}</p>
-                      <p className="mt-0.5 text-sm text-slate-500">{task.projectName || 'No project'}</p>
-                    </div>
-                    <span className={`employee-today-pill ${taskStatusToneClass(task.status, task.priority)}`}>
-                      {taskStatusLabel(task.status, task.priority)}
-                    </span>
-                    <time className="employee-today-time">{taskTimeLabel(task.deadline, index)}</time>
-                  </article>
-                ))}
+                {sortedTodayTasks.slice(0, 4).map((task, index) => {
+                  // Determine tag (project or personal)
+                  const isPersonal = !task.projectName || task.projectName === 'No project';
+                  const tagLabel = isPersonal ? 'Personal' : task.projectName;
+                  const tagClass = isPersonal
+                    ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200';
+                  return (
+                    <article className="employee-today-row" key={task._id}>
+                      <input
+                        aria-label={`Mark task ${task.title} as checked`}
+                        checked={checkedTaskIds.has(task._id)}
+                        className="employee-today-check"
+                        onChange={() => toggleTaskChecked(task._id)}
+                        type="checkbox"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-[1.05rem] font-semibold text-slate-950">{task.title}</p>
+                        <span className={`mt-1 inline-block rounded px-2 py-0.5 text-xs font-semibold ${tagClass}`}>{tagLabel}</span>
+                      </div>
+                      <span className={`employee-today-pill ${taskStatusToneClass(task.status, task.priority)} ml-2`}>{taskStatusLabel(task.status, task.priority)}</span>
+                      <time className="employee-today-time">{taskTimeLabel(task.deadline, index)}</time>
+                    </article>
+                  );
+                })}
               </div>
             </div>
 
@@ -734,106 +805,48 @@ const EmployeeDashboard = () => {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Assigned Projects</h3>
-          <div className="mt-4 space-y-3">
-            {(data?.assignedProjects || []).length === 0 && <p className="text-sm text-slate-500">No assigned projects.</p>}
-            {(data?.assignedProjects || []).map((project) => (
-              <div className="rounded-md border border-slate-100 bg-slate-50 p-3" key={project._id}>
-                <p className="font-semibold text-ink">{project.name}</p>
-                <p className="text-sm text-slate-600">Role: {project.role}</p>
-                <p className="text-sm text-slate-600">Deadline: {prettyDate(project.deadline)}</p>
-                <p className="text-sm text-slate-600">Progress: {project.progress}%</p>
-              </div>
+        <section className="employee-workupdate-card rounded-md border border-slate-200 bg-white p-5 shadow-soft">
+          <h3 className="employee-workupdate-title text-ink">Today's Work Update</h3>
+          <form className="employee-workupdate-form mt-4" onSubmit={submitDailyUpdate}>
+            <div>
+              <label className="employee-workupdate-label" htmlFor="dailyWorkDescription">What did you work on today?</label>
+              <textarea className="employee-workupdate-input employee-workupdate-textarea" id="dailyWorkDescription" name="workDescription" onChange={(event) => setDailyForm((prev) => ({ ...prev, workDescription: event.target.value }))} placeholder="Describe your primary tasks..." rows={3} value={dailyForm.workDescription} />
+            </div>
+            <div>
+              <label className="employee-workupdate-label" htmlFor="dailyTimeSpent">Time spent (hours)</label>
+              <input className="employee-workupdate-input" id="dailyTimeSpent" name="timeSpent" min="0" onChange={(event) => setDailyForm((prev) => ({ ...prev, timeSpent: event.target.value }))} placeholder="e.g. 8" step="0.5" type="number" value={dailyForm.timeSpent} />
+            </div>
+            <div>
+              <label className="employee-workupdate-label" htmlFor="dailyBlockers">Issues/blockers</label>
+              <textarea className="employee-workupdate-input employee-workupdate-textarea" id="dailyBlockers" name="blockers" onChange={(event) => setDailyForm((prev) => ({ ...prev, blockers: event.target.value }))} placeholder="Any hurdles encountered..." rows={2} value={dailyForm.blockers} />
+            </div>
+            <div>
+              <label className="employee-workupdate-label" htmlFor="dailyTomorrowPlan">Tomorrow's plan</label>
+              <textarea className="employee-workupdate-input employee-workupdate-textarea" id="dailyTomorrowPlan" name="tomorrowPlan" onChange={(event) => setDailyForm((prev) => ({ ...prev, tomorrowPlan: event.target.value }))} placeholder="Next steps and goals..." rows={2} value={dailyForm.tomorrowPlan} />
+            </div>
+            <button className="employee-workupdate-submit" disabled={actionBusy === 'dailyUpdate'} type="submit">Submit daily update</button>
+          </form>
+        </section>
+
+        <section className="employee-notifications-card rounded-md border border-slate-200 bg-white p-5 shadow-soft">
+          <div className="employee-notifications-head">
+            <h3 className="employee-notifications-title text-ink">Notifications</h3>
+            <span className="employee-notifications-unread">{unreadCount} unread</span>
+          </div>
+
+          <div className="employee-notifications-list">
+            {notificationCards.map((item) => (
+              <article className="employee-notification-item" key={item.key}>
+                <span className={`employee-notification-dot ${item.toneClass}`} />
+                <div className="employee-notification-content">
+                  <div className="employee-notification-item-head">
+                    <p className="employee-notification-item-title">{item.title}</p>
+                    <span className="employee-notification-item-count">{item.count}</span>
+                  </div>
+                  <p className="employee-notification-item-copy">{item.message}</p>
+                </div>
+              </article>
             ))}
-          </div>
-        </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Todo List</h3>
-          <form className="mt-3 space-y-2" onSubmit={addTodo}>
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="todoTitle" name="todoTitle" onChange={(event) => setTodoTitle(event.target.value)} placeholder="Add new todo" value={todoTitle} />
-            <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="todoDescription" name="todoDescription" onChange={(event) => setTodoDescription(event.target.value)} placeholder="Description (optional)" value={todoDescription} />
-            <button className="btn-primary" disabled={actionBusy === 'addTodo'} type="submit">Add new todo</button>
-          </form>
-
-          <div className="mt-4 space-y-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Personal todos</p>
-              {(data?.todos?.personal || []).map((todo) => (
-                <div className="mt-2 flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm" key={todo._id}>
-                  <span>{todo.title}</span>
-                  <button className="employee-link text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
-                </div>
-              ))}
-            </div>
-
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Project todos</p>
-              {(data?.todos?.project || []).map((todo) => (
-                <div className="mt-2 flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm" key={todo._id}>
-                  <span>{todo.title} {todo.projectId?.name ? `(${todo.projectId.name})` : ''}</span>
-                  <button className="employee-link text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
-                </div>
-              ))}
-            </div>
-
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Task todos</p>
-              {(data?.todos?.task || []).map((todo) => (
-                <div className="mt-2 flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm" key={todo._id}>
-                  <span>{todo.title} {todo.taskId?.title ? `(${todo.taskId.title})` : ''}</span>
-                  <button className="employee-link text-xs font-semibold text-sky-700" disabled={todo.status === 'completed' || actionBusy === `todo-${todo._id}`} onClick={() => completeTodo(todo._id)} type="button">Mark completed</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Today's Work Update</h3>
-          <form className="mt-4 space-y-3" onSubmit={submitDailyUpdate}>
-            <div>
-              <label className="text-sm font-semibold text-slate-700">What did you work on today?</label>
-              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyWorkDescription" name="workDescription" onChange={(event) => setDailyForm((prev) => ({ ...prev, workDescription: event.target.value }))} rows={3} value={dailyForm.workDescription} />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-slate-700">Time spent (hours)</label>
-              <input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyTimeSpent" name="timeSpent" min="0" onChange={(event) => setDailyForm((prev) => ({ ...prev, timeSpent: event.target.value }))} step="0.5" type="number" value={dailyForm.timeSpent} />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-slate-700">Issues/blockers</label>
-              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyBlockers" name="blockers" onChange={(event) => setDailyForm((prev) => ({ ...prev, blockers: event.target.value }))} rows={2} value={dailyForm.blockers} />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-slate-700">Tomorrow's plan</label>
-              <textarea className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" id="dailyTomorrowPlan" name="tomorrowPlan" onChange={(event) => setDailyForm((prev) => ({ ...prev, tomorrowPlan: event.target.value }))} rows={2} value={dailyForm.tomorrowPlan} />
-            </div>
-            <button className="btn-primary" disabled={actionBusy === 'dailyUpdate'} type="submit">Submit daily update</button>
-          </form>
-        </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Notifications</h3>
-          <div className="mt-4 space-y-3 text-sm">
-            <div>
-              <p className="font-semibold text-slate-700">New task assigned</p>
-              {(data?.notifications?.newTaskAssigned || []).slice(0, 3).map((item) => <p className="text-slate-600" key={item._id}>{item.message}</p>)}
-            </div>
-            <div>
-              <p className="font-semibold text-slate-700">Deadline reminder</p>
-              {(data?.notifications?.deadlineReminder || []).slice(0, 3).map((item) => <p className="text-slate-600" key={item._id}>{item.message}</p>)}
-            </div>
-            <div>
-              <p className="font-semibold text-slate-700">Admin comments</p>
-              {(data?.notifications?.adminComments || []).slice(0, 3).map((item) => <p className="text-slate-600" key={item._id}>{item.message}</p>)}
-            </div>
-            <div>
-              <p className="font-semibold text-slate-700">Project updates</p>
-              {(data?.notifications?.projectUpdates || []).slice(0, 3).map((item) => <p className="text-slate-600" key={item._id}>{item.message}</p>)}
-            </div>
           </div>
         </section>
       </div>

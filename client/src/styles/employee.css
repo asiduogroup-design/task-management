@@ -716,14 +716,18 @@
   color: #dc2626;
 }
 
-.employee-page .employee-today-pill-done,
+.employee-page .employee-today-pill-done {
+  background: #d7dee8;
+  color: #445468;
+}
+
 .employee-page .employee-today-pill-todo {
-  background: #e2e8f0;
-  color: #475569;
+  background: #e5e7eb;
+  color: #596579;
 }
 
 .employee-page .employee-today-time {
-  font-size: 1.3rem;
+  font-size: 1rem;
   font-weight: 500;
   color: #475569;
   white-space: nowrap;
@@ -797,14 +801,20 @@
 }
 
 .employee-page .employee-week-active-title {
+  font-family: var(--employee-font-display);
   font-size: 1.7rem;
   font-weight: 700;
+  letter-spacing: 0.01em;
   color: #312e81;
 }
 
 .employee-page .employee-week-active-copy {
+  font-family: var(--employee-font-display);
   margin-top: 0.35rem;
-  font-size: 1.18rem;
+  font-size: 1.35rem;
+  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: #4338ca;
 }
 
@@ -1029,6 +1039,194 @@
 .employee-page .employee-attendance-summary-row:hover {
   background: rgba(239, 246, 255, 0.88);
   transform: translateX(2px);
+}
+
+/* Work update and notifications redesign */
+.employee-page .employee-workupdate-card,
+.employee-page .employee-notifications-card {
+  border-radius: 1.35rem;
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+}
+
+.employee-page .employee-workupdate-title,
+.employee-page .employee-notifications-title {
+  font-family: var(--employee-font-display);
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.employee-page .employee-workupdate-form {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.employee-page .employee-workupdate-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.employee-page .employee-workupdate-input {
+  width: 100%;
+  border-radius: 1.15rem;
+  border: 1px solid #dbe1ea;
+  background: #f8fafc;
+  padding: 0.88rem 1rem;
+  font-size: 1.02rem;
+  color: #334155;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.employee-page .employee-workupdate-textarea {
+  min-height: 5.8rem;
+  resize: vertical;
+}
+
+.employee-page .employee-workupdate-input::placeholder {
+  color: #94a3b8;
+}
+
+.employee-page .employee-workupdate-input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  background: #ffffff;
+}
+
+.employee-page .employee-workupdate-submit {
+  width: fit-content;
+  min-width: 14rem;
+  border: 0;
+  border-radius: 0.95rem;
+  background: linear-gradient(90deg, #2563eb, #2563eb 55%, #3b82f6);
+  color: #ffffff;
+  font-size: 1.02rem;
+  font-weight: 800;
+  padding: 0.85rem 1.35rem;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.28);
+  transition: transform 130ms ease, box-shadow 130ms ease, opacity 130ms ease;
+}
+
+.employee-page .employee-workupdate-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 13px 24px rgba(37, 99, 235, 0.34);
+}
+
+.employee-page .employee-workupdate-submit:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.employee-page .employee-notifications-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.employee-page .employee-notifications-unread {
+  border-radius: 0.5rem;
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 0.77rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.56rem;
+}
+
+.employee-page .employee-notifications-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.employee-page .employee-notification-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #f8fafc;
+  padding: 0.95rem 1rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.employee-page .employee-notification-dot {
+  width: 0.56rem;
+  height: 0.56rem;
+  border-radius: 999px;
+  margin-top: 0.38rem;
+}
+
+.employee-page .employee-notification-dot-task {
+  background: #3b82f6;
+}
+
+.employee-page .employee-notification-dot-deadline {
+  background: #f59e0b;
+}
+
+.employee-page .employee-notification-dot-muted {
+  background: #cbd5e1;
+}
+
+.employee-page .employee-notification-dot-admin {
+  background: #f97316;
+}
+
+.employee-page .employee-notification-item-title {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.employee-page .employee-notification-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.employee-page .employee-notification-item-count {
+  border-radius: 999px;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #c2410c;
+  background: #ffedd5;
+}
+
+.employee-page .employee-notification-item-copy {
+  margin-top: 0.18rem;
+  font-size: 0.99rem;
+  line-height: 1.55;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .employee-page .employee-workupdate-title,
+  .employee-page .employee-notifications-title {
+    font-size: 2.1rem;
+  }
+
+  .employee-page .employee-workupdate-submit {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .celebration-overlay {

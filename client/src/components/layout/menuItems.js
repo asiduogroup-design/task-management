@@ -30,6 +30,7 @@ export const employeeMenu = [
   ['Completed Tasks', '/employee/completed-tasks', 'completedTasks'],
   ['Leave Request', '/employee/leaves', 'leaveRequest'],
   ['Profile', '/employee/profile', 'profile'],
+  ['Settings', '/employee/settings', 'settings'],
   ['Notifications', '/employee/notifications', 'notifications']
 ];
 

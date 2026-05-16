@@ -21,7 +21,6 @@ const statusLabel = {
 const prettyDate = (value) => (value ? new Date(value).toLocaleDateString() : '-');
 const prettyTime = (value) => (value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-');
 
-const toTaskStatus = (status = '') => status.replace(/_/g, ' ');
 const employeeOverviewDisabledKey = 'ewms_employee_overview_disabled';
 const priorityRank = { urgent: 4, high: 3, medium: 2, low: 1 };
 
@@ -34,20 +33,39 @@ const toMinutes = (value) => {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-const priorityLabel = (priority = 'medium') => {
-  const normalized = String(priority || 'medium').toLowerCase();
-  if (normalized === 'urgent') return 'Urgent';
-  if (normalized === 'high') return 'High';
-  if (normalized === 'low') return 'Low';
-  return 'Medium';
+const taskStatusLabel = (status = '', priority = '') => {
+  const normalizedPriority = String(priority || '').toLowerCase();
+  const normalizedStatus = String(status || '').toLowerCase();
+
+  if (normalizedPriority === 'urgent') return 'Urgent';
+  if (normalizedStatus === 'in_progress') return 'In Progress';
+  if (normalizedStatus === 'in_review') return 'Review';
+  if (normalizedStatus === 'completed') return 'Done';
+  return 'Todo';
 };
 
-const priorityToneClass = (priority = 'medium') => {
-  const normalized = String(priority || 'medium').toLowerCase();
-  if (normalized === 'urgent') return 'employee-priority-urgent';
-  if (normalized === 'high') return 'employee-priority-high';
-  if (normalized === 'low') return 'employee-priority-low';
-  return 'employee-priority-medium';
+const taskStatusToneClass = (status = '', priority = '') => {
+  const normalizedPriority = String(priority || '').toLowerCase();
+  const normalizedStatus = String(status || '').toLowerCase();
+
+  if (normalizedPriority === 'urgent') return 'employee-today-pill-urgent';
+  if (normalizedStatus === 'in_progress') return 'employee-today-pill-progress';
+  if (normalizedStatus === 'in_review') return 'employee-today-pill-review';
+  if (normalizedStatus === 'completed') return 'employee-today-pill-done';
+  return 'employee-today-pill-todo';
+};
+
+const taskTimeLabel = (deadline, index) => {
+  if (deadline) {
+    const date = new Date(deadline);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+
+  const fallback = [10, 13, 15, 17];
+  const hour = fallback[index % fallback.length];
+  return new Date(2000, 0, 1, hour, 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const isSameDate = (left, right) => {
@@ -69,6 +87,7 @@ const EmployeeDashboard = () => {
     tomorrowPlan: ''
   });
   const [message, setMessage] = useState('');
+  const [checkedTaskIds, setCheckedTaskIds] = useState(() => new Set());
 
   const buildFallbackDashboard = async () => {
     const [attendanceRes, tasksRes, projectsRes, todosRes, updatesRes, notificationsRes] = await Promise.all([
@@ -221,6 +240,41 @@ const EmployeeDashboard = () => {
       return leftDeadline - rightDeadline;
     });
   }, [data?.todayTasks]);
+
+  const weeklyTaskMetrics = useMemo(() => {
+    const list = data?.todayTasks || [];
+    const total = list.length;
+    const completed = list.filter((task) => task.status === 'completed').length;
+    const inReview = list.filter((task) => task.status === 'in_review').length;
+    const overdue = list.filter((task) => {
+      if (!task.deadline || task.status === 'completed') return false;
+      const deadlineDate = new Date(task.deadline);
+      return !Number.isNaN(deadlineDate.getTime()) && deadlineDate.getTime() < Date.now();
+    }).length;
+    const completedRate = total ? Math.round((completed / total) * 100) : 0;
+    const inReviewRate = total ? Math.round((inReview / total) * 100) : 0;
+    const overdueRate = total ? Math.round((overdue / total) * 100) : 0;
+
+    return {
+      completedRate,
+      inReviewRate,
+      overdueRate,
+      activeProjects: (data?.assignedProjects || []).length,
+      projectNames: (data?.assignedProjects || []).slice(0, 3).map((project) => project.name)
+    };
+  }, [data?.assignedProjects, data?.todayTasks]);
+
+  const toggleTaskChecked = (taskId) => {
+    setCheckedTaskIds((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
 
   const attendanceGraph = useMemo(() => {
     const loginMin = toMinutes(attendance.loginTime);
@@ -500,32 +554,65 @@ const EmployeeDashboard = () => {
           )}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-ink">Today's Tasks</h3>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Sorted by priority first</p>
-            </div>
-            <div className="employee-priority-legend" aria-label="Priority legend">
-              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-urgent" />Urgent</span>
-              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-high" />High</span>
-              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-medium" />Medium</span>
-              <span className="employee-priority-legend-item"><span className="employee-priority-dot employee-priority-dot-low" />Low</span>
-            </div>
-          </div>
-          <div className="mt-4 space-y-3">
-            {sortedTodayTasks.length === 0 && <p className="text-sm text-slate-500">No tasks assigned.</p>}
-            {sortedTodayTasks.map((task) => (
-              <div className={`employee-priority-card rounded-md border border-slate-100 bg-slate-50 p-3 ${priorityToneClass(task.priority)}`} key={task._id}>
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="font-semibold text-ink">{task.title}</p>
-                  <span className={`employee-priority-pill ${priorityToneClass(task.priority)}`}>{priorityLabel(task.priority)}</span>
-                </div>
-                <p className="text-sm text-slate-600">Project: {task.projectName}</p>
-                <p className="text-sm text-slate-600">Deadline: {prettyDate(task.deadline)}</p>
-                <p className="text-sm capitalize text-slate-600">Status: {toTaskStatus(task.status)}</p>
+        <section className="employee-today-wrap rounded-[1.2rem] border border-slate-200 bg-white p-5 shadow-soft lg:col-span-2">
+          <div className="employee-today-grid">
+            <div className="employee-today-list-panel">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="employee-today-title text-ink">Today's Tasks</h3>
+                <a className="employee-link text-sm font-semibold text-blue-700" href="/employee/tasks">View all</a>
               </div>
-            ))}
+
+              <div className="mt-4 space-y-1">
+                {sortedTodayTasks.length === 0 && <p className="text-sm text-slate-500">No tasks assigned.</p>}
+                {sortedTodayTasks.slice(0, 4).map((task, index) => (
+                  <article className="employee-today-row" key={task._id}>
+                    <input
+                      aria-label={`Mark task ${task.title} as checked`}
+                      checked={checkedTaskIds.has(task._id)}
+                      className="employee-today-check"
+                      onChange={() => toggleTaskChecked(task._id)}
+                      type="checkbox"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-[1.05rem] font-semibold text-slate-950">{task.title}</p>
+                      <p className="mt-0.5 text-sm text-slate-500">{task.projectName || 'No project'}</p>
+                    </div>
+                    <span className={`employee-today-pill ${taskStatusToneClass(task.status, task.priority)}`}>
+                      {taskStatusLabel(task.status, task.priority)}
+                    </span>
+                    <time className="employee-today-time">{taskTimeLabel(task.deadline, index)}</time>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <aside className="employee-today-week-panel">
+              <h4 className="employee-today-week-title">This week</h4>
+
+              <div className="employee-week-stat-block">
+                <div className="employee-week-stat-line"><span>Tasks completed</span><span>{weeklyTaskMetrics.completedRate}%</span></div>
+                <div className="employee-week-bar"><span className="employee-week-fill employee-week-fill-completed" style={{ width: `${weeklyTaskMetrics.completedRate}%` }} /></div>
+              </div>
+
+              <div className="employee-week-stat-block">
+                <div className="employee-week-stat-line"><span>In review</span><span>{weeklyTaskMetrics.inReviewRate}%</span></div>
+                <div className="employee-week-bar"><span className="employee-week-fill employee-week-fill-review" style={{ width: `${weeklyTaskMetrics.inReviewRate}%` }} /></div>
+              </div>
+
+              <div className="employee-week-stat-block">
+                <div className="employee-week-stat-line"><span>Overdue</span><span>{weeklyTaskMetrics.overdueRate}%</span></div>
+                <div className="employee-week-bar"><span className="employee-week-fill employee-week-fill-overdue" style={{ width: `${weeklyTaskMetrics.overdueRate}%` }} /></div>
+              </div>
+
+              <div className="employee-week-active-projects">
+                <p className="employee-week-active-title">{weeklyTaskMetrics.activeProjects} active projects</p>
+                <p className="employee-week-active-copy">
+                  {weeklyTaskMetrics.projectNames.length > 0
+                    ? `You're contributing across ${weeklyTaskMetrics.projectNames.join(', ')}.`
+                    : 'You currently have no active projects assigned.'}
+                </p>
+              </div>
+            </aside>
           </div>
         </section>
       </div>

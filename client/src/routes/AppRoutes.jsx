@@ -28,6 +28,7 @@ import DailyWorkUpdate from '../pages/employee/DailyWorkUpdate.jsx';
 import CompletedTasks from '../pages/employee/CompletedTasks.jsx';
 import LeaveRequest from '../pages/employee/LeaveRequest.jsx';
 import Profile from '../pages/employee/Profile.jsx';
+import EmployeeSettings from '../pages/employee/Settings.jsx';
 import ManagerDashboard from '../pages/manager/ManagerDashboard.jsx';
 import AssignedProjects from '../pages/manager/AssignedProjects.jsx';
 import ProjectTasks from '../pages/manager/ProjectTasks.jsx';
@@ -83,6 +84,7 @@ const AppRoutes = () => (
     <Route path="/employee/completed-tasks" element={<RoleBasedRoute roles={['employee']}><CompletedTasks /></RoleBasedRoute>} />
     <Route path="/employee/leaves" element={<RoleBasedRoute roles={['employee']}><LeaveRequest /></RoleBasedRoute>} />
     <Route path="/employee/profile" element={<RoleBasedRoute roles={['employee']}><Profile /></RoleBasedRoute>} />
+    <Route path="/employee/settings" element={<RoleBasedRoute roles={['employee']}><EmployeeSettings /></RoleBasedRoute>} />
     <Route path="/employee/notifications" element={<RoleBasedRoute roles={['employee']}><Notifications title="My Notifications" /></RoleBasedRoute>} />
 
     <Route path="/manager/dashboard" element={<RoleBasedRoute roles={['manager']}><ManagerDashboard /></RoleBasedRoute>} />

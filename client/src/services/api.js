@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const DEFAULT_API_BASE_URL = 'https://task-management-5aro.onrender.com/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || DEFAULT_API_BASE_URL
 });
 
 api.interceptors.request.use((config) => {

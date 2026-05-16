@@ -13,6 +13,17 @@ router.post('/break-end', breakEnd);
 router.get('/today', getTodayAttendance);
 router.get('/history', getAttendanceHistory);
 router.get('/admin/summary', authorize(...adminRoles), getAttendanceSummary);
+
+// Employee-accessible summary (per employee)
+router.get('/summary', async (req, res, next) => {
+	try {
+		// Use the same controller but filter by employeeId
+		req.query.employeeId = req.employee?._id?.toString();
+		next();
+	} catch (err) {
+		next(err);
+	}
+}, getAttendanceSummary);
 router.get('/admin/export', authorize(...adminRoles), exportAttendance);
 router.post('/admin/mark-absent', authorize(...adminRoles), markAbsent);
 router.get('/admin', authorize(...adminRoles), getAdminAttendance);

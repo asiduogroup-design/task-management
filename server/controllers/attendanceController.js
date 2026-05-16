@@ -166,24 +166,65 @@ export const getAttendanceSummary = asyncHandler(async (req, res) => {
   const nextDay = new Date(day);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const totalEmployees = await (await import('../models/Employee.js')).default.countDocuments();
-  const todayRecords = await Attendance.find({ date: { $gte: day, $lt: nextDay } });
+  // If employeeId is present, filter by employee
+  const { employeeId } = req.query;
+  let records = [];
+  let totalEmployees = 1;
+  if (employeeId) {
+    // Per-employee summary for the week
+    const startOfWeek = new Date(day);
+    startOfWeek.setDate(day.getDate() - day.getDay()); // Sunday
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    records = await Attendance.find({ employeeId, date: { $gte: startOfWeek, $lt: endOfWeek } });
+    totalEmployees = 1;
+  } else {
+    // Admin summary for all employees for a single day
+    totalEmployees = await (await import('../models/Employee.js')).default.countDocuments();
+    records = await Attendance.find({ date: { $gte: day, $lt: nextDay } });
+  }
 
-  const present = todayRecords.filter((r) => ['logged_in', 'on_break', 'logged_out', 'late'].includes(r.status)).length;
-  const onLeave = todayRecords.filter((r) => r.status === 'on_leave').length;
-  const lateLogin = todayRecords.filter((r) => r.status === 'late').length;
-  const earlyLogoutCount = todayRecords.filter((r) => r.earlyLogout).length;
-  const absent = todayRecords.filter((r) => r.status === 'absent').length;
-  const notMarked = totalEmployees - todayRecords.length;
-
-  res.json({
-    totalEmployees,
-    present,
-    absent: absent + notMarked,
-    lateLogin,
-    earlyLogout: earlyLogoutCount,
-    onLeave
-  });
+  // Calculate stats
+  let present = 0, onLeave = 0, lateLogin = 0, earlyLogoutCount = 0, absent = 0, notMarked = 0, totalWorkingHours = 0;
+  if (employeeId) {
+    // Per-employee weekly summary
+    present = records.filter((r) => ['logged_in', 'on_break', 'logged_out', 'late'].includes(r.status)).length;
+    onLeave = records.filter((r) => r.status === 'on_leave').length;
+    lateLogin = records.filter((r) => r.status === 'late').length;
+    earlyLogoutCount = records.filter((r) => r.earlyLogout).length;
+    absent = records.filter((r) => r.status === 'absent').length;
+    totalWorkingHours = records.reduce((sum, r) => sum + (r.totalWorkingHours || 0), 0);
+    notMarked = 7 - records.length;
+    res.json({
+      summary: {
+        present,
+        leaves: onLeave,
+        absents: absent + notMarked,
+        lateLogin,
+        earlyLogout: earlyLogoutCount,
+        workingHours: Number(totalWorkingHours.toFixed(2)),
+        totalDays: 7,
+        maxWorkingHours: 40 // Assume 8h x 5d
+      }
+    });
+    return;
+  } else {
+    // Admin summary for a single day
+    present = records.filter((r) => ['logged_in', 'on_break', 'logged_out', 'late'].includes(r.status)).length;
+    onLeave = records.filter((r) => r.status === 'on_leave').length;
+    lateLogin = records.filter((r) => r.status === 'late').length;
+    earlyLogoutCount = records.filter((r) => r.earlyLogout).length;
+    absent = records.filter((r) => r.status === 'absent').length;
+    notMarked = totalEmployees - records.length;
+    res.json({
+      totalEmployees,
+      present,
+      absent: absent + notMarked,
+      lateLogin,
+      earlyLogout: earlyLogoutCount,
+      onLeave
+    });
+  }
 });
 
 export const markAbsent = asyncHandler(async (req, res) => {

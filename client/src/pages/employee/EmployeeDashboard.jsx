@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+// Helper for attendance summary colors
+const summaryColors = {
+  present: '#2563eb', // blue
+  leave: '#f59e42',  // orange
+  absent: '#e11d48', // red
+  hours: '#059669'   // green
+};
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { attendanceService } from '../../services/attendanceService.js';
@@ -73,7 +80,59 @@ const isSameDate = (left, right) => {
   const r = new Date(right);
   return l.getFullYear() === r.getFullYear() && l.getMonth() === r.getMonth() && l.getDate() === r.getDate();
 };
+
+const isPresentStatus = (status) => ['logged_in', 'logged_out', 'on_break', 'late'].includes(status);
+
+const businessDaysInMonth = (year, month) => {
+  const days = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= days; d += 1) {
+    const dow = new Date(year, month, d).getDay();
+    if (dow !== 0 && dow !== 6) count += 1;
+  }
+  return count;
+};
+
 const EmployeeDashboard = () => {
+  // Monthly summary state (same source and calculation as MyAttendance page)
+  const [weekSummary, setWeekSummary] = useState(null);
+
+  const loadMonthlySummary = async () => {
+    const res = await attendanceService.history();
+    const records = res.data?.records || [];
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+
+    const monthRecords = records.filter((item) => {
+      const itemDate = new Date(item.date);
+      return !Number.isNaN(itemDate.getTime()) && itemDate.getFullYear() === year && itemDate.getMonth() === month;
+    });
+
+    const present = monthRecords.filter((r) => isPresentStatus(r.status)).length;
+    const leaves = monthRecords.filter((r) => r.status === 'on_leave').length;
+    const absents = monthRecords.filter((r) => r.status === 'absent').length;
+    const lateDays = monthRecords.filter((r) => r.status === 'late').length;
+    const workingHours = monthRecords.reduce((sum, r) => sum + Number(r.totalWorkingHours || 0), 0);
+    const totalDays = businessDaysInMonth(year, month);
+
+    setWeekSummary({
+      present,
+      leaves,
+      absents,
+      lateDays,
+      workingHours: Number(workingHours.toFixed(2)),
+      totalDays,
+      maxWorkingHours: totalDays * 8,
+      monthLabel: new Date(year, month, 1).toLocaleString([], { month: 'long', year: 'numeric' })
+    });
+  };
+
+  // Fetch monthly summary on mount
+  useEffect(() => {
+    loadMonthlySummary()
+      .catch(() => setWeekSummary(null));
+  }, []);
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -337,6 +396,7 @@ const EmployeeDashboard = () => {
       if (kind === 'breakStart') await attendanceService.breakStart();
       if (kind === 'breakEnd') await attendanceService.breakEnd();
       await loadDashboard();
+      await loadMonthlySummary();
     } catch (error) {
       setMessage(error?.response?.data?.message || 'Attendance action failed.');
     } finally {
@@ -490,22 +550,24 @@ const EmployeeDashboard = () => {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="text-lg font-bold text-ink">Login / Logout Section</h3>
-          <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-6 grid gap-6">
+        {/* Login/Logout + Summary Card Row */}
+        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-soft flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-[320px]">
+            <h3 className="text-lg font-bold text-ink">Login / Logout Section</h3>
+            <div className="mt-4 flex flex-wrap gap-2">
             <button className="btn-primary employee-attendance-action employee-attendance-login" disabled={actionBusy === 'login' || ['logged_in', 'on_break', 'logged_out', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('login')} type="button">Login</button>
             <button className="btn-secondary employee-attendance-action employee-attendance-logout" disabled={actionBusy === 'logout' || !['logged_in', 'on_break', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('logout')} type="button">Logout</button>
             <button className="btn-secondary employee-attendance-action employee-attendance-break" disabled={actionBusy === 'breakStart' || !['logged_in', 'late'].includes(currentStatus)} onClick={() => runAttendanceAction('breakStart')} type="button">Break start</button>
             <button className="btn-secondary employee-attendance-action employee-attendance-break-end" disabled={actionBusy === 'breakEnd' || currentStatus !== 'on_break'} onClick={() => runAttendanceAction('breakEnd')} type="button">Break end</button>
           </div>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live status: <span className="employee-live-status">{statusLabel[currentStatus] || currentStatus}</span></p>
-          <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
-            <p><span className="text-slate-500">Today's login time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.loginTime)}</span></p>
-            <p><span className="text-slate-500">Today's logout time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.logoutTime)}</span></p>
-            <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{Number(attendance.totalWorkingHours || 0).toFixed(2)}</span></p>
-          </div>
-          {attendanceGraph && (
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live status: <span className="employee-live-status">{statusLabel[currentStatus] || currentStatus}</span></p>
+            <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+              <p><span className="text-slate-500">Today's login time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.loginTime)}</span></p>
+              <p><span className="text-slate-500">Today's logout time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.logoutTime)}</span></p>
+              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{Number(attendance.totalWorkingHours || 0).toFixed(2)}</span></p>
+            </div>
+            {attendanceGraph && (
             <div className="employee-attendance-graph mt-4">
               <p className="employee-attendance-graph-title">Day activity graph</p>
 
@@ -552,9 +614,63 @@ const EmployeeDashboard = () => {
               </div>
             </div>
           )}
+
+          </div>
+          {/* Summary Card */}
+          <div className="flex-1 min-w-[320px] flex items-center">
+            <div className="w-full rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
+              <h4 className="text-base font-bold mb-2 text-ink">Monthly Summary</h4>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{weekSummary?.monthLabel || ''}</p>
+              {!weekSummary ? (
+                <div className="text-slate-400 text-sm">Loading...</div>
+              ) : (
+                <>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">Present days</span>
+                    <span className="font-bold" style={{ color: summaryColors.present }}>{weekSummary.present || 0}</span>
+                  </div>
+                  <div className="w-full h-2 rounded bg-slate-100 mb-3">
+                    <div style={{ width: `${Math.min(100, (weekSummary.present / (weekSummary.totalDays || 7)) * 100)}%`, background: summaryColors.present }} className="h-2 rounded transition-all" />
+                  </div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">Leaves</span>
+                    <span className="font-bold" style={{ color: summaryColors.leave }}>{weekSummary.leaves || 0}</span>
+                  </div>
+                  <div className="w-full h-2 rounded bg-slate-100 mb-3">
+                    <div style={{ width: `${Math.min(100, (weekSummary.leaves / (weekSummary.totalDays || 7)) * 100)}%`, background: summaryColors.leave }} className="h-2 rounded transition-all" />
+                  </div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">Absents</span>
+                    <span className="font-bold" style={{ color: summaryColors.absent }}>{weekSummary.absents || 0}</span>
+                  </div>
+                  <div className="w-full h-2 rounded bg-slate-100 mb-3">
+                    <div style={{ width: `${Math.min(100, (weekSummary.absents / (weekSummary.totalDays || 7)) * 100)}%`, background: summaryColors.absent }} className="h-2 rounded transition-all" />
+                  </div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">Late days</span>
+                    <span className="font-bold" style={{ color: summaryColors.leave }}>{weekSummary.lateDays || 0}</span>
+                  </div>
+                  <div className="w-full h-2 rounded bg-slate-100 mb-3">
+                    <div style={{ width: `${Math.min(100, (weekSummary.lateDays / (weekSummary.totalDays || 22)) * 100)}%`, background: summaryColors.leave }} className="h-2 rounded transition-all" />
+                  </div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">Working hours</span>
+                    <span className="font-bold" style={{ color: summaryColors.hours }}>{weekSummary.workingHours || 0}</span>
+                  </div>
+                  <div className="w-full h-2 rounded bg-slate-100 mb-1">
+                    <div style={{ width: `${Math.min(100, (weekSummary.workingHours / (weekSummary.maxWorkingHours || 40)) * 100)}%`, background: summaryColors.hours }} className="h-2 rounded transition-all" />
+                  </div>
+                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                    <span>Total working days: {weekSummary.totalDays || 22}</span>
+                    <span>Max hrs: {weekSummary.maxWorkingHours || 176}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </section>
 
-        <section className="employee-today-wrap rounded-[1.2rem] border border-slate-200 bg-white p-5 shadow-soft lg:col-span-2">
+        <section className="employee-today-wrap rounded-[1.2rem] border border-slate-200 bg-white p-5 shadow-soft">
           <div className="employee-today-grid">
             <div className="employee-today-list-panel">
               <div className="flex items-start justify-between gap-3">

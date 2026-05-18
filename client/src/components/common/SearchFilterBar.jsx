@@ -1,14 +1,22 @@
-const SearchFilterBar = ({ search, setSearch, searchId = 'workspace-search', searchName = 'workspaceSearch', children }) => (
-  <div className="mb-4 flex flex-col gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
+const SearchFilterBar = ({
+  search,
+  setSearch,
+  searchId = 'workspace-search',
+  searchName = 'workspaceSearch',
+  singleRowDesktop = false,
+  controlsNoWrapOnDesktop = false,
+  children
+}) => (
+  <div className={`mb-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm ${singleRowDesktop ? 'grid grid-cols-1 gap-3 xl:grid-cols-5 xl:items-center' : 'flex flex-col gap-3 md:flex-row md:items-center'}`}>
     <input
-      className="form-field md:max-w-sm"
+      className={`form-field ${singleRowDesktop ? 'w-full' : controlsNoWrapOnDesktop ? 'md:w-56 md:flex-none xl:w-72' : 'md:max-w-sm'}`}
       id={searchId}
       name={searchName}
       placeholder="Search..."
       value={search}
       onChange={(event) => setSearch(event.target.value)}
     />
-    <div className="flex flex-1 flex-wrap gap-3">{children}</div>
+    <div className={`${singleRowDesktop ? 'contents' : `flex flex-1 gap-3 ${controlsNoWrapOnDesktop ? 'flex-wrap xl:flex-nowrap' : 'flex-wrap'}`}`}>{children}</div>
   </div>
 );
 

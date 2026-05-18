@@ -77,9 +77,15 @@ const CompletedTasks = () => {
 
 	return (
 		<ModulePage title="Completed Tasks History">
-			<SearchFilterBar search={search} setSearch={setSearch} searchId="completedTaskSearch" searchName="completedTaskSearch">
+			<SearchFilterBar
+				singleRowDesktop
+				search={search}
+				setSearch={setSearch}
+				searchId="completedTaskSearch"
+				searchName="completedTaskSearch"
+			>
 				<select
-					className="form-field md:max-w-xs"
+					className="form-field w-full"
 					id="completedTaskProjectId"
 					name="projectId"
 					onChange={(event) => setFilters((current) => ({ ...current, projectId: event.target.value }))}
@@ -92,7 +98,7 @@ const CompletedTasks = () => {
 				</select>
 
 				<input
-					className="form-field md:max-w-xs"
+					className="form-field w-full"
 					id="completedTaskFromDate"
 					name="fromDate"
 					onChange={(event) => setFilters((current) => ({ ...current, fromDate: event.target.value }))}
@@ -101,7 +107,7 @@ const CompletedTasks = () => {
 				/>
 
 				<input
-					className="form-field md:max-w-xs"
+					className="form-field w-full"
 					id="completedTaskToDate"
 					name="toDate"
 					onChange={(event) => setFilters((current) => ({ ...current, toDate: event.target.value }))}
@@ -110,7 +116,7 @@ const CompletedTasks = () => {
 				/>
 
 				<select
-					className="form-field md:max-w-xs"
+					className="form-field w-full"
 					id="completedTaskApprovalStatus"
 					name="approvalStatus"
 					onChange={(event) => setFilters((current) => ({ ...current, approvalStatus: event.target.value }))}

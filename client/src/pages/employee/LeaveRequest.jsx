@@ -108,7 +108,7 @@ const LeaveRequest = () => {
 			<section className="mb-5 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
 				<h2 className="text-lg font-black text-slate-950">1. Leave Form</h2>
 
-				<form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={submitLeave}>
+				<form className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" onSubmit={submitLeave}>
 					<label className="block">
 						<span className="mb-1 block text-sm font-bold text-slate-700">Leave type</span>
 						<select className="form-field" id="leaveType" name="leaveType" onChange={(event) => onChange('leaveType', event.target.value)} required value={form.leaveType}>
@@ -131,12 +131,12 @@ const LeaveRequest = () => {
 						<input className="form-field" id="leaveToDate" name="toDate" onChange={(event) => onChange('toDate', event.target.value)} required type="date" value={form.toDate} />
 					</label>
 
-					<article className="rounded-md bg-slate-50 p-3 md:self-end">
+					<article className="rounded-md bg-slate-50 p-3">
 						<p className="text-xs font-bold uppercase text-slate-500">Total leave days</p>
 						<p className="mt-1 text-lg font-black text-slate-900">{totalDays || 0}</p>
 					</article>
 
-					<label className="block md:col-span-2">
+					<label className="block sm:col-span-2 xl:col-span-4">
 						<span className="mb-1 block text-sm font-bold text-slate-700">Reason</span>
 						<textarea className="form-field min-h-24" id="leaveReason" name="reason" onChange={(event) => onChange('reason', event.target.value)} required value={form.reason} />
 					</label>
@@ -151,7 +151,7 @@ const LeaveRequest = () => {
 						<input className="form-field" id="leaveAttachmentUrl" name="attachmentUrl" onChange={(event) => onChange('attachmentUrl', event.target.value)} placeholder="https://..." value={form.attachmentUrl} />
 					</label>
 
-					<div className="md:col-span-2">
+					<div className="sm:col-span-2 xl:col-span-4">
 						<button className="btn-primary" disabled={submitting} type="submit">{submitting ? 'Submitting...' : 'Apply leave'}</button>
 					</div>
 				</form>
@@ -160,10 +160,10 @@ const LeaveRequest = () => {
 			<section className="mb-5 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
 				<h2 className="text-lg font-black text-slate-950">2. Leave Balance</h2>
 				<div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-					<StatCard label={`Total leave (${balance.year || currentYear})`} value={loading ? '...' : balance.totalLeave || 0} />
-					<StatCard label="Used leave" value={loading ? '...' : balance.usedLeave || 0} />
-					<StatCard label="Remaining leave" value={loading ? '...' : balance.remainingLeave || 0} />
-					<StatCard label="Pending approval" value={loading ? '...' : balance.pendingLeave || 0} />
+					<StatCard className="border-sky-200 bg-sky-50" label={`Total leave (${balance.year || currentYear})`} value={loading ? '...' : balance.totalLeave || 0} />
+					<StatCard className="border-amber-200 bg-amber-50" label="Used leave" value={loading ? '...' : balance.usedLeave || 0} />
+					<StatCard className="border-emerald-200 bg-emerald-50" label="Remaining leave" value={loading ? '...' : balance.remainingLeave || 0} />
+					<StatCard className="border-rose-200 bg-rose-50" label="Pending approval" value={loading ? '...' : balance.pendingLeave || 0} />
 				</div>
 			</section>
 

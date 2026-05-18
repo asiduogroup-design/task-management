@@ -320,7 +320,7 @@ const EmployeeTaskDetails = () => {
 
             <form className="mt-3 grid gap-3 md:grid-cols-3" onSubmit={submitAttachment}>
               <label className="block">
-                <span className="mb-1 block text-sm font-bold text-slate-700">Type</span>
+                <span className="mb-1 block text-sm font-bold text-sky-700">Type</span>
                 <select className="form-field" id="taskAttachmentCategory" name="category" onChange={(event) => setAttachmentForm((current) => ({ ...current, category: event.target.value }))} value={attachmentForm.category}>
                   <option value="document">Upload files</option>
                   <option value="screenshot">Add screenshots</option>
@@ -328,11 +328,11 @@ const EmployeeTaskDetails = () => {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-bold text-slate-700">File / link label</span>
+                <span className="mb-1 block text-sm font-bold text-sky-700">File / link label</span>
                 <input className="form-field" id="taskAttachmentFileName" name="fileName" onChange={(event) => setAttachmentForm((current) => ({ ...current, fileName: event.target.value }))} required value={attachmentForm.fileName} />
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-bold text-slate-700">File URL / link</span>
+                <span className="mb-1 block text-sm font-bold text-sky-700">File URL / link</span>
                 <input className="form-field" id="taskAttachmentFileUrl" name="fileUrl" onChange={(event) => setAttachmentForm((current) => ({ ...current, fileUrl: event.target.value }))} required value={attachmentForm.fileUrl} />
               </label>
               <div className="md:col-span-3">
@@ -342,7 +342,7 @@ const EmployeeTaskDetails = () => {
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <article className="rounded-md bg-slate-50 p-4">
-                <p className="text-sm font-bold text-slate-900">View admin files</p>
+                <p className="text-sm font-bold text-sky-700">View admin files</p>
                 <div className="mt-2 space-y-2">
                   {adminAttachments.length ? (
                     adminAttachments.map((item) => (
@@ -355,7 +355,7 @@ const EmployeeTaskDetails = () => {
               </article>
 
               <article className="rounded-md bg-slate-50 p-4">
-                <p className="text-sm font-bold text-slate-900">All attachments</p>
+                <p className="text-sm font-bold text-sky-700">All attachments</p>
                 <div className="mt-2 space-y-2">
                   {attachments.length ? (
                     attachments.map((item) => (

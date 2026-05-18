@@ -10,6 +10,12 @@ const formatDate = (date) => (date ? new Date(date).toLocaleDateString() : '-');
 const employeeName = (employee) => employee?.userId?.name || employee?.employeeCode || '-';
 const formatTaskStatus = (status) => status?.replaceAll('_', ' ') || '-';
 const textOrFallback = (value, fallback = 'Not specified.') => value || fallback;
+const getMemberInitials = (name = '-') => name
+  .split(' ')
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0]?.toUpperCase() || '')
+  .join('') || '-';
 
 const boardColumns = [
   { key: 'to_do', label: 'To Do' },
@@ -18,6 +24,9 @@ const boardColumns = [
   { key: 'completed', label: 'Completed' },
   { key: 'overdue', label: 'Overdue' }
 ];
+
+const sectionShell = 'rounded-2xl border bg-white/95 p-6 shadow-[0_14px_40px_-28px_rgba(15,23,42,0.7)] backdrop-blur';
+const sectionTitle = 'text-lg font-black tracking-tight text-slate-950';
 
 const ProjectDetails = ({ employeeView = false }) => {
   const { id } = useParams();
@@ -77,92 +86,99 @@ const ProjectDetails = ({ employeeView = false }) => {
         <div className="space-y-5">
           {employeeView ? (
             <>
-              <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm" id="project-header">
-                <h3 className="text-lg font-black text-slate-950">Project Header</h3>
-                <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                  <div className="rounded-md bg-slate-50 p-4 xl:col-span-2">
-                    <p className="text-xs font-bold uppercase text-slate-500">Project name</p>
+              <section className={`${sectionShell} border-sky-200/80`} id="project-header">
+                <h3 className={sectionTitle}>Project Header</h3>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="rounded-xl border border-sky-200/70 bg-sky-50/90 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Project name</p>
                     <p className="mt-1 text-lg font-black text-slate-900">{project.name}</p>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Project ID</p>
+                  <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/80 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">Project ID</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{project.projectCode || '-'}</p>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Deadline</p>
+                  <div className="rounded-xl border border-rose-200/70 bg-rose-50/80 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-700">Deadline</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(project.deadline)}</p>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Status</p>
+                  <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/80 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Status</p>
                     <div className="mt-1"><StatusBadge status={project.status} /></div>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Priority</p>
+                  <div className="rounded-xl border border-amber-200/70 bg-amber-50/80 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">Priority</p>
                     <div className="mt-1"><PriorityBadge priority={project.priority} /></div>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-black text-slate-950">Project Description</h3>
+              <section className={`${sectionShell} border-violet-200/80`}>
+                <h3 className={sectionTitle}>Project Description</h3>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Requirements</p>
+                  <div className="rounded-xl border border-violet-200/70 bg-violet-50/80 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-700">Requirements</p>
                     <p className="mt-2 text-sm font-semibold text-slate-800">{textOrFallback(project.requirements || project.description)}</p>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Notes</p>
+                  <div className="rounded-xl border border-fuchsia-200/70 bg-fuchsia-50/80 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-700">Notes</p>
                     <p className="mt-2 text-sm font-semibold text-slate-800">{textOrFallback(project.notes)}</p>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4 md:col-span-2">
-                    <p className="text-xs font-bold uppercase text-slate-500">Links</p>
-                    {project.referenceLinks?.length ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {project.referenceLinks.map((link) => (
-                          <a className="text-sm font-semibold text-blue-700 underline" href={link} key={link} rel="noreferrer" target="_blank">{link}</a>
-                        ))}
+                  <div className="rounded-xl border border-slate-200/70 bg-slate-50/80 p-4 md:col-span-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-600">Attachments</p>
+                    <div className="mt-2 space-y-3">
+                      <div className="grid gap-2 md:grid-cols-3">
+                        {['requirement_document', 'design_files', 'reference_documents'].map((category) => {
+                          const files = project.attachments?.filter((attachment) => attachment.category === category) || [];
+                          return (
+                            <div className="rounded-xl border border-slate-200 bg-white p-3" key={category}>
+                              <p className="text-xs font-bold capitalize text-sky-700">{category.replaceAll('_', ' ')}</p>
+                              <p className="mt-1 text-sm text-slate-600">{files.map((file) => file.name).join(', ') || 'No files added.'}</p>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ) : <p className="mt-2 text-sm font-semibold text-slate-800">No links added.</p>}
-                  </div>
-                  <div className="rounded-md bg-slate-50 p-4 md:col-span-2">
-                    <p className="text-xs font-bold uppercase text-slate-500">Attachments</p>
-                    <div className="mt-2 grid gap-2 md:grid-cols-3">
-                      {['requirement_document', 'design_files', 'reference_documents'].map((category) => {
-                        const files = project.attachments?.filter((attachment) => attachment.category === category) || [];
-                        return (
-                          <div className="rounded-md border border-slate-200 bg-white p-3" key={category}>
-                            <p className="text-xs font-bold capitalize text-slate-700">{category.replaceAll('_', ' ')}</p>
-                            <p className="mt-1 text-sm text-slate-600">{files.map((file) => file.name).join(', ') || 'No files added.'}</p>
+                      <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Links</p>
+                        {project.referenceLinks?.length ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {project.referenceLinks.map((link) => (
+                              <a className="rounded-full border border-sky-200 bg-white px-3 py-1 text-sm font-semibold text-sky-700" href={link} key={link} rel="noreferrer" target="_blank">{link}</a>
+                            ))}
                           </div>
-                        );
-                      })}
+                        ) : <p className="mt-2 text-sm text-slate-600">No links added.</p>}
+                      </div>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm" id="project-tasks">
-                <h3 className="text-lg font-black text-slate-950">My Tasks in This Project</h3>
+              <section className={`${sectionShell} border-cyan-200/80`} id="project-tasks">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className={sectionTitle}>My Tasks in This Project</h3>
+                  <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-sm font-semibold text-cyan-700">
+                    {myTasks.length} task{myTasks.length === 1 ? '' : 's'}
+                  </span>
+                </div>
                 <div className="mt-4 overflow-x-auto">
                   {myTasks.length ? (
-                    <table className="w-full min-w-[700px] text-left text-sm">
+                    <table className="w-full min-w-[700px] overflow-hidden rounded-xl text-left text-sm">
                       <thead>
-                        <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                          <th className="py-2 pr-3">Task title</th>
-                          <th className="py-2 pr-3">Priority</th>
-                          <th className="py-2 pr-3">Start date</th>
-                          <th className="py-2 pr-3">Due date</th>
-                          <th className="py-2">Status</th>
+                        <tr className="border-b border-cyan-200 bg-cyan-50 text-xs uppercase tracking-[0.16em] text-cyan-800">
+                          <th className="py-3 pl-3 pr-3">Task title</th>
+                          <th className="py-3 pr-3">Priority</th>
+                          <th className="py-3 pr-3">Start date</th>
+                          <th className="py-3 pr-3">Due date</th>
+                          <th className="py-3 pr-3">Status</th>
                         </tr>
                       </thead>
                       <tbody>
                         {myTasks.map((task) => (
-                          <tr className="border-b border-slate-100" key={task._id}>
-                            <td className="py-3 pr-3 font-semibold text-slate-900">{task.title}</td>
+                          <tr className="border-b border-slate-100 last:border-b-0" key={task._id}>
+                            <td className="py-3 pl-3 pr-3 font-semibold text-slate-900">{task.title}</td>
                             <td className="py-3 pr-3"><PriorityBadge priority={task.priority} /></td>
                             <td className="py-3 pr-3 text-slate-600">{formatDate(task.startDate)}</td>
                             <td className="py-3 pr-3 text-slate-600">{formatDate(task.dueDate)}</td>
-                            <td className="py-3"><StatusBadge status={task.status} /></td>
+                            <td className="py-3 pr-3"><StatusBadge status={task.status} /></td>
                           </tr>
                         ))}
                       </tbody>
@@ -171,58 +187,136 @@ const ProjectDetails = ({ employeeView = false }) => {
                 </div>
               </section>
 
-              <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-black text-slate-950">Project Timeline</h3>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-md bg-slate-50 p-4">
-                    <p className="text-xs font-bold uppercase text-slate-500">Start date</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(timeline.startDate)}</p>
+              <section className={`${sectionShell} border-indigo-200/80`}>
+                <h3 className={sectionTitle}>Project Timeline</h3>
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-blue-200/70 bg-blue-50/70 p-5">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Start date</p>
+                    <p className="mt-2 text-base font-bold text-slate-900">{formatDate(timeline.startDate)}</p>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4 md:col-span-2">
-                    <p className="text-xs font-bold uppercase text-slate-500">Milestones</p>
-                    <div className="mt-2 space-y-2">
+
+                  <div className="rounded-2xl border border-violet-200/70 bg-violet-50/70 p-5">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-600">Deadline</p>
+                    <p className="mt-2 text-base font-bold text-slate-900">{formatDate(timeline.deadline)}</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Milestones</p>
+                    <div className="mt-4 space-y-3">
                       {timeline.milestones?.length ? timeline.milestones.map((milestone) => (
-                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2" key={milestone._id}>
-                          <p className="text-sm font-semibold text-slate-900">{milestone.title}</p>
-                          <p className="text-xs text-slate-600">{formatDate(milestone.dueDate)} | {formatTaskStatus(milestone.status)}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3" key={milestone._id}>
+                          <div className="flex items-center gap-3">
+                            <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                            <p className="text-sm font-semibold text-slate-900">{milestone.title}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <p className="text-xs text-slate-500">{formatDate(milestone.dueDate)}</p>
+                            <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                              {formatTaskStatus(milestone.status)}
+                            </span>
+                          </div>
                         </div>
                       )) : <p className="text-sm text-slate-500">No milestones added.</p>}
                     </div>
                   </div>
-                  <div className="rounded-md bg-slate-50 p-4 md:col-span-3">
-                    <p className="text-xs font-bold uppercase text-slate-500">Deadline</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(timeline.deadline)}</p>
-                  </div>
                 </div>
               </section>
 
-              <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-black text-slate-950">Team Members</h3>
-                <div className="mt-4 divide-y divide-slate-100">
-                  {teamMembers.length ? teamMembers.map((member) => (
-                    <div className="grid gap-2 py-3 md:grid-cols-3" key={member._id || member.name}>
-                      <p className="font-bold text-slate-900">{member.name}</p>
-                      <p className="text-sm text-slate-600">Role: <span className="font-semibold">{member.role}</span></p>
-                      <p className="text-sm text-slate-600">Contact: <span className="font-semibold">{member.contact?.email || '-'} | {member.contact?.phone || '-'}</span></p>
-                    </div>
-                  )) : <p className="py-3 text-sm text-slate-500">No team members assigned.</p>}
-                </div>
-              </section>
-
-              <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+              <section className={`${sectionShell} border-emerald-200/80`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-lg font-black text-slate-950">Daily Updates for This Project</h3>
+                  <h3 className={sectionTitle}>Team members</h3>
+                  <p className="text-sm font-medium text-slate-500">{teamMembers.length} member{teamMembers.length === 1 ? '' : 's'}</p>
+                </div>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  {teamMembers.length ? teamMembers.map((member, index) => {
+                    const initials = getMemberInitials(member.name);
+                    const avatarStyles = [
+                      'bg-blue-100 text-blue-700',
+                      'bg-emerald-100 text-emerald-700',
+                      'bg-violet-100 text-violet-700',
+                      'bg-amber-100 text-amber-700'
+                    ];
+                    const avatarClass = avatarStyles[index % avatarStyles.length];
+
+                    return (
+                      <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0 md:flex-row md:items-center md:justify-between" key={member._id || member.name}>
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-black ${avatarClass}`}>
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900">{member.name}</p>
+                            <p className="text-sm text-slate-500 capitalize">{member.role || 'member'}</p>
+                          </div>
+                        </div>
+                        <div className="text-left md:text-right">
+                          <p className="text-sm text-slate-600">
+                            {member.contact?.email || '-'}
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            {member.contact?.phone || '-'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }) : <p className="px-4 py-4 text-sm text-slate-500">No team members assigned.</p>}
+                </div>
+              </section>
+
+              <section className={`${sectionShell} border-amber-200/80`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className={sectionTitle}>Daily Updates for This Project</h3>
                   <Link className="btn-primary" to={`/employee/daily-update?projectId=${project._id}`}>Add update</Link>
                 </div>
-                <div className="mt-4 divide-y divide-slate-100">
-                  {dailyUpdates.length ? dailyUpdates.map((update) => (
-                    <article className="grid gap-2 py-3 md:grid-cols-4" key={update._id}>
-                      <p className="text-sm font-semibold text-slate-900">{employeeName(update.employeeId)}</p>
-                      <p className="text-sm text-slate-600">Date: <span className="font-semibold">{formatDate(update.date)}</span></p>
-                      <p className="text-sm text-slate-600">Time spent: <span className="font-semibold">{update.timeSpent || 0}h</span></p>
-                      <p className="text-sm text-slate-600">Update: <span className="font-semibold">{update.completedWork || update.workDescription || '-'}</span></p>
-                    </article>
-                  )) : <p className="py-3 text-sm text-slate-500">No previous updates available for this project.</p>}
+                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  {dailyUpdates.length ? (
+                    <table className="w-full overflow-hidden text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 text-xs uppercase tracking-[0.16em] text-amber-800">
+                          <th className="px-4 py-3">
+                            <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-blue-700">Employee</span>
+                          </th>
+                          <th className="px-4 py-3">
+                            <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Time spent</span>
+                          </th>
+                          <th className="px-4 py-3">
+                            <span className="inline-flex rounded-full bg-violet-100 px-3 py-1 text-violet-700">Date</span>
+                          </th>
+                          <th className="px-4 py-3">
+                            <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-amber-800">Update</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dailyUpdates.map((update) => (
+                          <tr className="border-b border-slate-100 even:bg-sky-50/40 last:border-b-0 hover:bg-amber-50/50" key={update._id}>
+                            <td className="px-4 py-3 font-semibold text-slate-900">
+                              <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-blue-700">
+                                {employeeName(update.employeeId)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-700">
+                              <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 font-semibold text-emerald-700">
+                                {update.timeSpent || 0}h
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-700">
+                              <span className="inline-flex rounded-full bg-violet-100 px-3 py-1 font-semibold text-violet-700">
+                                {formatDate(update.date)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-700">
+                              <span className="inline-flex max-w-full rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 font-semibold text-rose-800 shadow-sm">
+                                {update.completedWork || update.workDescription || '-'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="px-4 py-4 text-sm text-slate-500">No previous updates available for this project.</p>
+                  )}
                 </div>
               </section>
             </>
@@ -394,7 +488,7 @@ const ProjectDetails = ({ employeeView = false }) => {
                 const files = project.attachments?.filter((attachment) => attachment.category === category) || [];
                 return (
                   <div className="rounded-md bg-slate-50 p-3" key={category}>
-                    <p className="text-sm font-bold capitalize text-slate-800">{category.replaceAll('_', ' ')}</p>
+                    <p className="text-sm font-bold capitalize text-sky-700">{category.replaceAll('_', ' ')}</p>
                     <p className="mt-2 text-sm text-slate-600">{files.map((file) => file.name).join(', ') || 'No files added.'}</p>
                   </div>
                 );

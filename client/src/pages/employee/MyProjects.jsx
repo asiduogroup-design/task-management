@@ -13,6 +13,14 @@ const filterOptions = [
   { key: 'on_hold', label: 'On-hold projects' }
 ];
 
+const filterTextColorMap = {
+  all: '#0f766e',
+  active: '#1d4ed8',
+  completed: '#15803d',
+  overdue: '#b45309',
+  on_hold: '#7c3aed'
+};
+
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '-');
 
 const normalizeStatus = (status, deadline) => {
@@ -121,23 +129,39 @@ const MyProjects = () => {
               ['Completed', summary.completed],
               ['Overdue', summary.overdue],
               ['On hold', summary.on_hold]
-            ].map(([label, value]) => (
-              <div className="employee-project-kpi min-w-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" key={label}>
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
+            ].map(([label, value]) => {
+              const colorMap = {
+                'Total': { bg: '#ecfeff', border: '#06b6d4', text: '#0f766e' },
+                'Active': { bg: '#eff6ff', border: '#3b82f6', text: '#1e40af' },
+                'Completed': { bg: '#f0fdf4', border: '#22c55e', text: '#166534' },
+                'Overdue': { bg: '#fef3c7', border: '#f59e0b', text: '#b45309' },
+                'On hold': { bg: '#f5f3ff', border: '#8b5cf6', text: '#6d28d9' }
+              };
+              const colors = colorMap[label] || colorMap['Total'];
+              return (
+              <div 
+                className="employee-project-kpi min-w-[120px] rounded-2xl border px-4 py-3"
+                style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+                key={label}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: colors.text }}>{label}</p>
                 <p className="mt-1 text-2xl font-black text-ink">{value}</p>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
           {filterOptions.map((option) => {
             const isActive = selectedFilter === option.key;
+            const inactiveTextColor = filterTextColorMap[option.key] || '#475569';
             return (
               <button
-                className={`employee-filter-pill rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink'}`}
+                className={`employee-filter-pill rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white hover:border-slate-300'}`}
                 key={option.key}
                 onClick={() => setSelectedFilter(option.key)}
+                style={isActive ? undefined : { color: inactiveTextColor }}
                 type="button"
               >
                 {option.label}
@@ -158,52 +182,63 @@ const MyProjects = () => {
         </section>
       ) : (
         <div className="mt-6 grid gap-5 xl:grid-cols-2">
-          {filteredProjects.map((project) => (
-            <article className="employee-project-card overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" key={project._id}>
-              <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white p-5">
+          {filteredProjects.map((project) => {
+            const borderColors = {
+              completed: '#2d9d78',
+              overdue: '#b7791f',
+              active: '#2458d3',
+              on_hold: '#94a3b8'
+            };
+            const borderColor = borderColors[project.status] || '#2458d3';
+            return (
+            <article 
+              className="employee-project-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" 
+              style={{ borderLeft: `4px solid ${borderColor}` }}
+              key={project._id}
+            >
+              <div className="p-5 pb-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand">{project.projectCode || 'Project'}</p>
-                    <h3 className="mt-1 text-xl font-black text-ink">{project.name}</h3>
+                    <h3 className="mt-1 text-lg font-black text-ink">{project.name}</h3>
                   </div>
                   <StatusBadge status={project.status} />
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{project.description || 'No description provided.'}</p>
+                <p className="mt-2 text-sm leading-5 text-slate-600">{project.description || 'No description provided.'}</p>
               </div>
 
-              <div className="grid gap-4 p-5 md:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="grid gap-0 px-5 py-3 md:grid-cols-2">
+                <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Your assignment</p>
-                  <p className="mt-2 text-sm font-semibold text-ink">Role: {project.role || 'Member'}</p>
-                  <p className="mt-1 text-sm text-slate-600">Department: {project.department || '-'}</p>
-                  <p className="mt-1 text-sm text-slate-600">Assigned on: {formatDate(project.assignedDate)}</p>
+                  <p className="mt-1 text-sm text-slate-700"><span className="font-semibold">Role:</span> {project.role || 'Member'}</p>
+                  <p className="mt-1 text-sm text-slate-700"><span className="font-semibold">Dept:</span> {project.department || '-'}</p>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50 p-4">
+                <div className="mt-3 md:mt-0">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Schedule</p>
-                  <p className="mt-2 text-sm text-slate-600">Start date: <span className="font-semibold text-ink">{formatDate(project.startDate)}</span></p>
-                  <p className="mt-1 text-sm text-slate-600">Deadline: <span className="font-semibold text-ink">{formatDate(project.deadline)}</span></p>
-                  <p className="mt-1 text-sm text-slate-600">Progress: <span className="font-semibold text-ink">{project.progressPercentage || 0}%</span></p>
+                  <p className="mt-1 text-sm text-slate-700"><span className="font-semibold">Start:</span> {formatDate(project.startDate)}</p>
+                  <p className="mt-1 text-sm text-slate-700"><span className="font-semibold">Deadline:</span> {formatDate(project.deadline)}</p>
                 </div>
               </div>
 
-              <div className="px-5 pb-5">
-                <div className="employee-progress-track mb-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="employee-progress-bar h-full rounded-full bg-brand transition-all" style={{ '--progress': `${project.progressPercentage || 0}%`, width: `${project.progressPercentage || 0}%` }} />
+              <div className="px-5 py-3">
+                <div className="flex items-center justify-between gap-2 text-sm text-slate-600 mb-2">
+                  <p>Progress: <span className="font-semibold text-ink">{project.progressPercentage || 0}%</span></p>
+                  <p><span className="font-semibold">{project.taskSummary?.completed || 0} of {project.taskSummary?.total || 0}</span> tasks complete</p>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-                  <p>{project.taskSummary?.completed || 0} of {project.taskSummary?.total || 0} tasks complete</p>
-                  <p className="font-semibold capitalize text-slate-700">Status: {project.status.replaceAll('_', ' ')}</p>
+                <div className="employee-progress-track h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div className="employee-progress-bar h-full rounded-full bg-gradient-to-r from-blue-500 to-green-500 transition-all" style={{ width: `${project.progressPercentage || 0}%` }} />
                 </div>
+              </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link className="btn-primary" to={`/employee/projects/${project._id}`}>View project</Link>
-                  <Link className="btn-secondary" to={`/employee/projects/${project._id}#project-tasks`}>View tasks</Link>
-                  <Link className="btn-secondary" to={`/employee/daily-update?projectId=${project._id}`}>Submit update</Link>
-                </div>
+              <div className="px-5 py-4 border-t border-slate-100 flex flex-wrap gap-2">
+                <Link className="btn-primary" to={`/employee/projects/${project._id}`}>View project</Link>
+                <Link className="btn-secondary" to={`/employee/projects/${project._id}#project-tasks`}>View tasks</Link>
+                <Link className="btn-secondary" to={`/employee/daily-update?projectId=${project._id}`}>Submit update</Link>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </ModulePage>

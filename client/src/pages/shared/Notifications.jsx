@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NotificationItem from '../../components/notifications/NotificationItem.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -71,10 +71,56 @@ const employeeSections = [
   }
 ];
 
+const sectionThemeMap = {
+  deadline_reminder: {
+    sectionClass: 'border-indigo-200 bg-indigo-50/40',
+    headingClass: 'text-indigo-900',
+    badgeClass: 'bg-indigo-100 text-indigo-700',
+    arrowClass: 'text-indigo-700',
+    previewClass: 'border-indigo-200 bg-indigo-50'
+  },
+  admin_comments: {
+    sectionClass: 'border-fuchsia-200 bg-fuchsia-50/40',
+    headingClass: 'text-fuchsia-900',
+    badgeClass: 'bg-fuchsia-100 text-fuchsia-700',
+    arrowClass: 'text-fuchsia-700',
+    previewClass: 'border-fuchsia-200 bg-fuchsia-50'
+  },
+  attendance: {
+    sectionClass: 'border-amber-200 bg-amber-50/40',
+    headingClass: 'text-amber-900',
+    badgeClass: 'bg-amber-100 text-amber-700',
+    arrowClass: 'text-amber-700',
+    previewClass: 'border-amber-200 bg-amber-50'
+  },
+  task: {
+    sectionClass: 'border-cyan-200 bg-cyan-50/40',
+    headingClass: 'text-cyan-900',
+    badgeClass: 'bg-cyan-100 text-cyan-700',
+    arrowClass: 'text-cyan-700',
+    previewClass: 'border-cyan-200 bg-cyan-50'
+  },
+  project: {
+    sectionClass: 'border-emerald-200 bg-emerald-50/40',
+    headingClass: 'text-emerald-900',
+    badgeClass: 'bg-emerald-100 text-emerald-700',
+    arrowClass: 'text-emerald-700',
+    previewClass: 'border-emerald-200 bg-emerald-50'
+  },
+  leave: {
+    sectionClass: 'border-rose-200 bg-rose-50/40',
+    headingClass: 'text-rose-900',
+    badgeClass: 'bg-rose-100 text-rose-700',
+    arrowClass: 'text-rose-700',
+    previewClass: 'border-rose-200 bg-rose-50'
+  }
+};
+
 const Notifications = ({ title = 'Notifications' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { notifications, loadNotifications, markRead, removeNotification } = useNotifications();
+  const [openSections, setOpenSections] = useState(() => new Set());
   const isAdmin = ['admin', 'super_admin'].includes(user?.role);
   const isEmployee = user?.role === 'employee';
   const activeSections = isEmployee ? employeeSections : sections;
@@ -113,31 +159,67 @@ const Notifications = ({ title = 'Notifications' }) => {
     await removeNotification(id);
   };
 
+  const toggleSection = (key) => {
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   return (
     <ModulePage title={title}>
       {notifications.length === 0 && <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm">No notifications available.</p>}
 
       {isAdmin || isEmployee ? (
         <div className="space-y-5">
-          {activeSections.map((section) => (
-            <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" key={section.key}>
+          {activeSections.map((section) => {
+            const theme = sectionThemeMap[section.key] || {
+              sectionClass: 'border-slate-200 bg-white',
+              headingClass: 'text-slate-900',
+              badgeClass: 'bg-orange-100 text-orange-700',
+              arrowClass: 'text-slate-500',
+              previewClass: 'border-slate-200 bg-slate-50'
+            };
+            return (
+            <section className={`rounded-md border p-4 shadow-sm ${theme.sectionClass}`} key={section.key}>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-lg font-black text-slate-900">{section.title}</h3>
-                <span className="inline-flex min-w-7 items-center justify-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-extrabold text-orange-700">{(grouped[section.key] || []).length}</span>
+                <button className="flex flex-1 items-center justify-between gap-3 text-left" type="button" onClick={() => toggleSection(section.key)}>
+                  <span className={`text-lg font-black ${theme.headingClass}`}>{section.title}</span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className={`inline-flex min-w-7 items-center justify-center rounded-full px-2 py-0.5 text-xs font-extrabold ${theme.badgeClass}`}>{(grouped[section.key] || []).length}</span>
+                    <span className={`text-lg font-black ${theme.arrowClass}`}>{openSections.has(section.key) ? '▴' : '▾'}</span>
+                  </span>
+                </button>
               </div>
               <div className="mt-3 space-y-3">
-                {(grouped[section.key] || []).length ? (grouped[section.key] || []).map((notification) => (
-                  <NotificationItem
-                    key={notification._id}
-                    notification={notification}
-                    onDelete={removeItem}
-                    onRead={markRead}
-                    onView={viewDetails}
-                  />
-                )) : <p className="text-sm text-slate-500">No alerts in this section.</p>}
+                {(grouped[section.key] || []).length ? (
+                  openSections.has(section.key) ? (
+                    (grouped[section.key] || []).map((notification) => (
+                      <NotificationItem
+                        key={notification._id}
+                        notification={notification}
+                        onDelete={removeItem}
+                        onRead={markRead}
+                        onView={viewDetails}
+                      />
+                    ))
+                  ) : (
+                    <article className={`rounded-md border p-3 shadow-sm ${theme.previewClass}`}>
+                      <h4 className="font-bold text-slate-950">{grouped[section.key][0].title}</h4>
+                      <p className="mt-1 text-sm text-slate-600">{grouped[section.key][0].message}</p>
+                      <p className="mt-2 text-xs font-semibold uppercase text-slate-500">{grouped[section.key].length} notifications</p>
+                    </article>
+                  )
+                ) : <p className="text-sm text-slate-500">No alerts in this section.</p>}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-3">

@@ -77,7 +77,7 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 				{/* Start task — play icon */}
 				{['to_do', 'reopened'].includes(task.status) ? (
 					<button
-						className="inline-flex items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 p-1.5 text-cyan-600 transition hover:bg-cyan-100 disabled:opacity-40"
+						className="inline-flex items-center justify-center rounded-lg border border-cyan-500 bg-cyan-100 p-2 text-cyan-700 font-bold shadow-md transition hover:bg-cyan-200 disabled:opacity-50"
 						disabled={isBusy}
 						onClick={() => onStatusChange(task._id, 'in_progress')}
 						title="Start task"
@@ -90,7 +90,7 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 				{/* Submit for review — upload/send icon */}
 				{task.status === 'in_progress' ? (
 					<button
-						className="inline-flex items-center justify-center rounded-lg border border-violet-200 bg-violet-50 p-1.5 text-violet-600 transition hover:bg-violet-100 disabled:opacity-40"
+						className="inline-flex items-center justify-center rounded-lg border border-violet-500 bg-violet-100 p-2 text-violet-700 font-bold shadow-md transition hover:bg-violet-200 disabled:opacity-50"
 						disabled={isBusy}
 						onClick={() => onStatusChange(task._id, 'under_review')}
 						title="Submit for review"
@@ -103,7 +103,7 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 				{/* Mark completed — check icon */}
 				{task.status === 'under_review' ? (
 					<button
-						className="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-40"
+						className="inline-flex items-center justify-center rounded-lg border border-emerald-500 bg-emerald-100 p-2 text-emerald-700 font-bold shadow-md transition hover:bg-emerald-200 disabled:opacity-50"
 						disabled={isBusy}
 						onClick={() => onStatusChange(task._id, 'completed')}
 						title="Mark completed"
@@ -282,185 +282,187 @@ const MyTasks = () => {
 	];
 
 	return (
-		<ModulePage title="My Tasks">
-			<CelebrationOverlay
-				active={celebration.active}
-				message={celebration.message}
-				onDone={() => setCelebration((current) => ({ ...current, active: false }))}
-				title={celebration.title}
-				variant={celebration.variant}
-			/>
+		<div className="bg-gray-100 min-h-screen">
+			<ModulePage title="My Tasks">
+				<CelebrationOverlay
+					active={celebration.active}
+					message={celebration.message}
+					onDone={() => setCelebration((current) => ({ ...current, active: false }))}
+					title={celebration.title}
+					variant={celebration.variant}
+				/>
 
-			{/* Subtitle: X tasks across Y projects */}
-			<p className="mb-5 text-sm font-semibold" style={{ color: '#0ea5e9' }}>
-				{summaryLoading ? '...' : `${summary.totalTasks || 0} task${(summary.totalTasks || 0) !== 1 ? 's' : ''} across ${projectOptions.length} project${projectOptions.length !== 1 ? 's' : ''}`}
-			</p>
+				{/* Subtitle: X tasks across Y projects */}
+				<p className="mb-5 text-sm font-semibold" style={{ color: '#0ea5e9' }}>
+					{summaryLoading ? '...' : `${summary.totalTasks || 0} task${(summary.totalTasks || 0) !== 1 ? 's' : ''} across ${projectOptions.length} project${projectOptions.length !== 1 ? 's' : ''}`}
+				</p>
 
-			{/* KPI Cards */}
-			<section className="employee-tasks-kpi mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-				{kpiCards.map((card) => (
-					<article
-						key={card.label}
-						className="rounded-2xl border p-5 shadow-sm"
-						style={{ backgroundColor: card.bg, borderColor: card.border }}
-					>
-						<p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: card.text }}>{card.label}</p>
-						<p className="text-3xl font-extrabold" style={{ color: card.accent }}>{summaryLoading ? '...' : card.value}</p>
-					</article>
-				))}
-			</section>
-
-			{/* Filter Section */}
-			<section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-				<div className="mb-4 flex items-center gap-2">
-					<span className="inline-block h-3 w-3 rounded-full bg-blue-500" />
-					<p className="text-xs font-bold uppercase tracking-widest text-slate-500">Filter Tasks</p>
-				</div>
-				<div className="flex flex-wrap gap-4">
-					{/* Search */}
-					<div className="flex min-w-[180px] flex-1 flex-col gap-1">
-						<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksSearch">Search</label>
-						<input
-							className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-							id="myTasksSearch"
-							name="search"
-							placeholder="Search tasks..."
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-						/>
-					</div>
-					{/* Project */}
-					<div className="flex min-w-[160px] flex-col gap-1">
-						<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksProjectId">Project</label>
-						<select
-							className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-							id="myTasksProjectId"
-							name="projectId"
-							value={filters.projectId}
-							onChange={(e) => setFilters((c) => ({ ...c, projectId: e.target.value }))}
+				{/* KPI Cards */}
+				<section className="employee-tasks-kpi mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+					{kpiCards.map((card) => (
+						<article
+							key={card.label}
+							className="rounded-2xl border p-5 shadow-sm"
+							style={{ backgroundColor: card.bg, borderColor: card.border }}
 						>
-							<option value="">All projects</option>
-							{projectOptions.map((p) => (
-								<option key={p.value} value={p.value}>{p.label}</option>
-							))}
-						</select>
-					</div>
-					{/* Priority */}
-					<div className="flex min-w-[140px] flex-col gap-1">
-						<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksPriority">Priority</label>
-						<select
-							className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-							id="myTasksPriority"
-							name="priority"
-							value={filters.priority}
-							onChange={(e) => setFilters((c) => ({ ...c, priority: e.target.value }))}
-						>
-							<option value="">All priorities</option>
-							<option value="low">Low</option>
-							<option value="medium">Medium</option>
-							<option value="high">High</option>
-							<option value="urgent">Urgent</option>
-						</select>
-					</div>
-					{/* Deadline */}
-					<div className="flex min-w-[160px] flex-col gap-1">
-						<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksDeadlineFilter">Deadline</label>
-						<select
-							className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-							id="myTasksDeadlineFilter"
-							name="deadlineFilter"
-							value={filters.deadlineFilter}
-							onChange={(e) => setFilters((c) => ({ ...c, deadlineFilter: e.target.value }))}
-						>
-							<option value="">All deadlines</option>
-							<option value="today">Due today</option>
-							<option value="this_week">Due this week</option>
-							<option value="overdue">Overdue deadline</option>
-							<option value="no_due_date">No due date</option>
-						</select>
-					</div>
-					{/* Status */}
-					<div className="flex min-w-[140px] flex-col gap-1">
-						<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksStatus">Status</label>
-						<select
-							className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-							id="myTasksStatus"
-							name="status"
-							value={filters.status}
-							onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}
-						>
-							<option value="">All statuses</option>
-							<option value="to_do">To Do</option>
-							<option value="in_progress">In Progress</option>
-							<option value="under_review">Review</option>
-							<option value="completed">Completed</option>
-						</select>
-					</div>
-				</div>
-			</section>
-
-			{error ? <p className="mb-4 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
-
-			{loading ? (
-				<section className="rounded-md border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">Loading tasks...</section>
-			) : (
-				<section className="grid gap-4 xl:grid-cols-5">
-					{statusColumns.map((column) => {
-						const cs = columnStyles[column.key];
-						return (
-						<div
-							className="employee-task-column overflow-hidden rounded-2xl border shadow-sm"
-							key={column.key}
-							style={{ backgroundColor: cs.bg, borderColor: cs.border }}
-						>
-							{/* Column header accent bar */}
-							<div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `2px solid ${cs.border}` }}>
-								<h2 className="text-sm font-black uppercase tracking-wide" style={{ color: cs.label }}>{column.label}</h2>
-								<span className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ backgroundColor: cs.badge, color: cs.label }}>{tasksByColumn[column.key].length}</span>
-							</div>
-
-							<div className="flex flex-col gap-3 p-3">
-								{tasksByColumn[column.key].length ? (
-									tasksByColumn[column.key].map((task) => (
-										<TaskCard
-											actionBusy={actionBusy}
-											key={task._id}
-											onAddComment={openCommentModal}
-											onStatusChange={handleStatusChange}
-											task={task}
-										/>
-									))
-								) : (
-									<p className="rounded-xl border border-dashed p-4 text-xs" style={{ borderColor: cs.border, color: cs.label, backgroundColor: 'white' }}>No tasks in this column.</p>
-								)}
-							</div>
-						</div>
-						);
-					})}
+							<p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: card.text }}>{card.label}</p>
+							<p className="text-3xl font-extrabold" style={{ color: card.accent }}>{summaryLoading ? '...' : card.value}</p>
+						</article>
+					))}
 				</section>
-			)}
 
-			{commentModal.open && commentModal.task ? (
-				<Modal onClose={closeCommentModal} title={`Add comment: ${commentModal.task.title}`}>
-					<form className="space-y-3" onSubmit={submitComment}>
-						<textarea
-							className="form-field min-h-24"
-							id="myTasksComment"
-							name="comment"
-							onChange={(event) => setCommentModal((current) => ({ ...current, text: event.target.value }))}
-							placeholder="Share an update or note"
-							value={commentModal.text}
-						/>
-						<div className="flex gap-2">
-							<button className="btn-primary" disabled={actionBusy === commentModal.task._id || !commentModal.text.trim()} type="submit">
-								{actionBusy === commentModal.task._id ? 'Saving...' : 'Add comment'}
-							</button>
-							<button className="btn-secondary" onClick={closeCommentModal} type="button">Cancel</button>
+				{/* Filter Section */}
+				<section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+					<div className="mb-4 flex items-center gap-2">
+						<span className="inline-block h-3 w-3 rounded-full bg-blue-500" />
+						<p className="text-xs font-bold uppercase tracking-widest text-slate-500">Filter Tasks</p>
+					</div>
+					<div className="flex flex-wrap gap-4">
+						{/* Search */}
+						<div className="flex min-w-[180px] flex-1 flex-col gap-1">
+							<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksSearch">Search</label>
+							<input
+								className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+								id="myTasksSearch"
+								name="search"
+								placeholder="Search tasks..."
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+							/>
 						</div>
-					</form>
-				</Modal>
-			) : null}
-		</ModulePage>
+						{/* Project */}
+						<div className="flex min-w-[160px] flex-col gap-1">
+							<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksProjectId">Project</label>
+							<select
+								className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+								id="myTasksProjectId"
+								name="projectId"
+								value={filters.projectId}
+								onChange={(e) => setFilters((c) => ({ ...c, projectId: e.target.value }))}
+							>
+								<option value="">All projects</option>
+								{projectOptions.map((p) => (
+									<option key={p.value} value={p.value}>{p.label}</option>
+								))}
+							</select>
+						</div>
+						{/* Priority */}
+						<div className="flex min-w-[140px] flex-col gap-1">
+							<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksPriority">Priority</label>
+							<select
+								className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+								id="myTasksPriority"
+								name="priority"
+								value={filters.priority}
+								onChange={(e) => setFilters((c) => ({ ...c, priority: e.target.value }))}
+							>
+								<option value="">All priorities</option>
+								<option value="low">Low</option>
+								<option value="medium">Medium</option>
+								<option value="high">High</option>
+								<option value="urgent">Urgent</option>
+							</select>
+						</div>
+						{/* Deadline */}
+						<div className="flex min-w-[160px] flex-col gap-1">
+							<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksDeadlineFilter">Deadline</label>
+							<select
+								className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+								id="myTasksDeadlineFilter"
+								name="deadlineFilter"
+								value={filters.deadlineFilter}
+								onChange={(e) => setFilters((c) => ({ ...c, deadlineFilter: e.target.value }))}
+							>
+								<option value="">All deadlines</option>
+								<option value="today">Due today</option>
+								<option value="this_week">Due this week</option>
+								<option value="overdue">Overdue deadline</option>
+								<option value="no_due_date">No due date</option>
+							</select>
+						</div>
+						{/* Status */}
+						<div className="flex min-w-[140px] flex-col gap-1">
+							<label className="text-[11px] font-bold uppercase tracking-widest text-slate-400" htmlFor="myTasksStatus">Status</label>
+							<select
+								className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+								id="myTasksStatus"
+								name="status"
+								value={filters.status}
+								onChange={(e) => setFilters((c) => ({ ...c, status: e.target.value }))}
+							>
+								<option value="">All statuses</option>
+								<option value="to_do">To Do</option>
+								<option value="in_progress">In Progress</option>
+								<option value="under_review">Review</option>
+								<option value="completed">Completed</option>
+							</select>
+						</div>
+					</div>
+				</section>
+
+				{error ? <p className="mb-4 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
+
+				{loading ? (
+					<section className="rounded-md border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">Loading tasks...</section>
+				) : (
+					<section className="grid gap-4 xl:grid-cols-5">
+						{statusColumns.map((column) => {
+							const cs = columnStyles[column.key];
+							return (
+								<div
+									className="employee-task-column overflow-hidden rounded-2xl border shadow-sm"
+									key={column.key}
+									style={{ backgroundColor: cs.bg, borderColor: cs.border }}
+								>
+									{/* Column header accent bar */}
+									<div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `2px solid ${cs.border}` }}>
+										<h2 className="text-sm font-black uppercase tracking-wide" style={{ color: cs.label }}>{column.label}</h2>
+										<span className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ backgroundColor: cs.badge, color: cs.label }}>{tasksByColumn[column.key].length}</span>
+									</div>
+
+									<div className="flex flex-col gap-3 p-3">
+										{tasksByColumn[column.key].length ? (
+											tasksByColumn[column.key].map((task) => (
+												<TaskCard
+													actionBusy={actionBusy}
+													key={task._id}
+													onAddComment={openCommentModal}
+													onStatusChange={handleStatusChange}
+													task={task}
+												/>
+											))
+										) : (
+											<p className="rounded-xl border border-dashed p-4 text-xs" style={{ borderColor: cs.border, color: cs.label, backgroundColor: 'white' }}>No tasks in this column.</p>
+										)}
+									</div>
+								</div>
+							);
+						})}
+					</section>
+				)}
+
+				{commentModal.open && commentModal.task ? (
+					<Modal onClose={closeCommentModal} title={`Add comment: ${commentModal.task.title}`}>
+						<form className="space-y-3" onSubmit={submitComment}>
+							<textarea
+								className="form-field min-h-24"
+								id="myTasksComment"
+								name="comment"
+								onChange={(event) => setCommentModal((current) => ({ ...current, text: event.target.value }))}
+								placeholder="Share an update or note"
+								value={commentModal.text}
+							/>
+							<div className="flex gap-2">
+								<button className="btn-primary" disabled={actionBusy === commentModal.task._id || !commentModal.text.trim()} type="submit">
+									{actionBusy === commentModal.task._id ? 'Saving...' : 'Add comment'}
+								</button>
+								<button className="btn-secondary" onClick={closeCommentModal} type="button">Cancel</button>
+							</div>
+						</form>
+					</Modal>
+				) : null}
+			</ModulePage>
+		</div>
 	);
 };
 

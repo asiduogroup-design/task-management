@@ -49,7 +49,7 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 	const isBusy = actionBusy === task._id;
 
 	return (
-		<article className="employee-task-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+		<article className="employee-task-card flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm min-h-[200px]">
 			<div className="flex items-start justify-between gap-3">
 				<div>
 					<h3 className="text-sm font-black text-slate-900">{task.title}</h3>
@@ -64,29 +64,64 @@ const TaskCard = ({ task, actionBusy, onStatusChange, onAddComment }) => {
 				<p>Assigned by: <span className="font-semibold text-slate-800">{task.assignedBy?.name || task.assignedBy?.email || '-'}</span></p>
 			</div>
 
-			<div className="mt-4 flex flex-wrap gap-2">
-				<Link className="employee-link text-xs font-bold text-blue-700" to={`/employee/tasks/${task._id}`}>View task</Link>
+			<div className="mt-auto pt-4 flex flex-wrap gap-2">
+				{/* View task — eye icon */}
+				<Link
+					className="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 p-1.5 text-blue-600 transition hover:bg-blue-100"
+					title="View task"
+					to={`/employee/tasks/${task._id}`}
+				>
+					<svg fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="15"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+				</Link>
 
+				{/* Start task — play icon */}
 				{['to_do', 'reopened'].includes(task.status) ? (
-					<button className="employee-link text-xs font-bold text-cyan-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'in_progress')} type="button">
-						Start task
+					<button
+						className="inline-flex items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 p-1.5 text-cyan-600 transition hover:bg-cyan-100 disabled:opacity-40"
+						disabled={isBusy}
+						onClick={() => onStatusChange(task._id, 'in_progress')}
+						title="Start task"
+						type="button"
+					>
+						<svg fill="currentColor" height="15" viewBox="0 0 24 24" width="15"><polygon points="5 3 19 12 5 21 5 3"/></svg>
 					</button>
 				) : null}
 
+				{/* Submit for review — upload/send icon */}
 				{task.status === 'in_progress' ? (
-					<button className="employee-link text-xs font-bold text-violet-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'under_review')} type="button">
-						Submit for review
+					<button
+						className="inline-flex items-center justify-center rounded-lg border border-violet-200 bg-violet-50 p-1.5 text-violet-600 transition hover:bg-violet-100 disabled:opacity-40"
+						disabled={isBusy}
+						onClick={() => onStatusChange(task._id, 'under_review')}
+						title="Submit for review"
+						type="button"
+					>
+						<svg fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="15"><line x1="12" x2="12" y1="19" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
 					</button>
 				) : null}
 
+				{/* Mark completed — check icon */}
 				{task.status === 'under_review' ? (
-					<button className="employee-link text-xs font-bold text-emerald-700" disabled={isBusy} onClick={() => onStatusChange(task._id, 'completed')} type="button">
-						Mark completed
+					<button
+						className="inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 p-1.5 text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-40"
+						disabled={isBusy}
+						onClick={() => onStatusChange(task._id, 'completed')}
+						title="Mark completed"
+						type="button"
+					>
+						<svg fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="15"><polyline points="20 6 9 17 4 12"/></svg>
 					</button>
 				) : null}
 
-				<button className="employee-link text-xs font-bold text-slate-700" disabled={isBusy} onClick={() => onAddComment(task)} type="button">
-					Add comment
+				{/* Add comment — chat bubble icon */}
+				<button
+					className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:opacity-40"
+					disabled={isBusy}
+					onClick={() => onAddComment(task)}
+					title="Add comment"
+					type="button"
+				>
+					<svg fill="none" height="15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="15"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 				</button>
 			</div>
 		</article>
@@ -384,7 +419,7 @@ const MyTasks = () => {
 								<span className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ backgroundColor: cs.badge, color: cs.label }}>{tasksByColumn[column.key].length}</span>
 							</div>
 
-							<div className="space-y-3 p-3">
+							<div className="flex flex-col gap-3 p-3">
 								{tasksByColumn[column.key].length ? (
 									tasksByColumn[column.key].map((task) => (
 										<TaskCard

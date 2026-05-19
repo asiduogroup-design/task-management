@@ -25,7 +25,7 @@ const AttendanceSection = ({ attendance }) => {
           { 
             key: 'totalWorkingHours', 
             label: 'Hours', 
-            render: (row) => (row.totalWorkingHours || 0).toFixed(2) 
+            render: (row) => Number(row.totalWorkingHours || 0).toFixed(2) 
           },
           { 
             key: 'status', 

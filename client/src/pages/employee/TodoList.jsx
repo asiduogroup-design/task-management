@@ -239,12 +239,12 @@ const TodoList = () => {
 	};
 
 	const todoCard = (todo) => (
-		<article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" key={todo._id}>
+		<article className={`employee-todo-item rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${todo.status === 'completed' ? 'employee-todo-item-completed' : ''}`} key={todo._id}>
 			<div className="flex items-start gap-3">
 				<input
 					aria-label={`Mark ${todo.title} completed`}
 					checked={todo.status === 'completed'}
-					className="mt-1"
+					className="employee-todo-check mt-1"
 					id={`todo-${todo._id}`}
 					name={`todo-${todo._id}`}
 					onChange={() => toggleComplete(todo)}
@@ -253,13 +253,13 @@ const TodoList = () => {
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-start justify-between gap-3">
 						<div>
-							<h3 className="text-sm font-black text-slate-900">{todo.title}</h3>
+							<h3 className="employee-todo-item-title text-sm font-black text-slate-900">{todo.title}</h3>
 							<p className="mt-1 text-xs text-slate-600">{todo.description || 'No description provided.'}</p>
 						</div>
 						<PriorityBadge priority={todo.priority} />
 					</div>
 
-					<div className="mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2 xl:grid-cols-4">
+					<div className="employee-todo-meta mt-3 grid gap-2 text-xs text-slate-600 md:grid-cols-2 xl:grid-cols-4">
 						<p>Due date: <span className="font-semibold text-slate-800">{formatDate(todo.dueDate)}</span></p>
 						<p>Status: <StatusBadge status={todo.status} /></p>
 						<p>Project: <span className="font-semibold text-slate-800">{todo.projectId?.name || todo.projectId?.projectCode || '-'}</span></p>
@@ -267,16 +267,16 @@ const TodoList = () => {
 					</div>
 
 					<div className="mt-3 flex flex-wrap gap-2">
-						<button className="text-xs font-bold text-slate-700" disabled={saving === `status-${todo._id}` || todo.status === 'pending'} onClick={() => updateStatus(todo, 'pending')} type="button">
+						<button className="employee-todo-action employee-todo-action-muted text-xs font-bold text-slate-700" disabled={saving === `status-${todo._id}` || todo.status === 'pending'} onClick={() => updateStatus(todo, 'pending')} type="button">
 							Pending
 						</button>
-						<button className="text-xs font-bold text-blue-700" disabled={saving === `status-${todo._id}` || todo.status === 'in_progress'} onClick={() => updateStatus(todo, 'in_progress')} type="button">
+						<button className="employee-todo-action employee-todo-action-blue text-xs font-bold text-blue-700" disabled={saving === `status-${todo._id}` || todo.status === 'in_progress'} onClick={() => updateStatus(todo, 'in_progress')} type="button">
 							In progress
 						</button>
-						<button className="text-xs font-bold text-emerald-700" disabled={saving === `status-${todo._id}` || todo.status === 'completed'} onClick={() => updateStatus(todo, 'completed')} type="button">
+						<button className="employee-todo-action employee-todo-action-green text-xs font-bold text-emerald-700" disabled={saving === `status-${todo._id}` || todo.status === 'completed'} onClick={() => updateStatus(todo, 'completed')} type="button">
 							Completed
 						</button>
-						<button className="text-xs font-bold text-red-700" disabled={saving === `delete-${todo._id}`} onClick={() => removeTodo(todo)} type="button">
+						<button className="employee-todo-action employee-todo-action-danger text-xs font-bold text-red-700" disabled={saving === `delete-${todo._id}`} onClick={() => removeTodo(todo)} type="button">
 							Delete
 						</button>
 					</div>
@@ -287,7 +287,8 @@ const TodoList = () => {
 
 	return (
 		<ModulePage title="Todo List">
-			<section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+			<div className="employee-todo-page space-y-5">
+			<section className="employee-todo-kpis mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 				<StatCard label="Total todos" value={loading ? '...' : summary.total} />
 				<StatCard label="Personal todos" value={loading ? '...' : summary.personal} />
 				<StatCard label="Project todos" value={loading ? '...' : summary.project} />
@@ -295,7 +296,7 @@ const TodoList = () => {
 				<StatCard label="Overdue todos" value={loading ? '...' : summary.overdue} />
 			</section>
 
-			<section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+			<section className="employee-todo-hero rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div>
 						<p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">Personal and project planning</p>
@@ -305,15 +306,15 @@ const TodoList = () => {
 						</p>
 					</div>
 					<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-						<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+						<div className="employee-todo-mini-stat rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
 							<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Pending</p>
 							<p className="mt-1 text-2xl font-black text-ink">{statusCounts.pending}</p>
 						</div>
-						<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+						<div className="employee-todo-mini-stat rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
 							<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">In progress</p>
 							<p className="mt-1 text-2xl font-black text-ink">{statusCounts.in_progress}</p>
 						</div>
-						<div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+						<div className="employee-todo-mini-stat rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
 							<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Completed</p>
 							<p className="mt-1 text-2xl font-black text-ink">{statusCounts.completed}</p>
 						</div>
@@ -323,7 +324,7 @@ const TodoList = () => {
 				{success ? <p className="mt-4 rounded-md bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">{success}</p> : null}
 				{error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}
 
-				<form className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5" onSubmit={createTodo}>
+				<form className="employee-todo-form mt-6 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5" onSubmit={createTodo}>
 					<div className="flex items-center justify-between gap-3">
 						<div>
 							<h3 className="text-lg font-black text-slate-950">Add Todo</h3>
@@ -332,18 +333,18 @@ const TodoList = () => {
 						<button className="btn-secondary" type="button" onClick={resetForm}>Reset</button>
 					</div>
 
-					<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+					<div className="employee-todo-form-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 						<label className="block">
 							<span className="mb-1 block text-sm font-bold text-slate-700">Todo title</span>
 							<input className="form-field" id="todoTitle" name="title" onChange={(event) => onFormChange('title', event.target.value)} placeholder="Add todo title" required value={form.title} />
 						</label>
 
-						<label className="block md:col-span-2 xl:col-span-2">
+						<label className="block md:col-span-2 xl:col-span-3">
 							<span className="mb-1 block text-sm font-bold text-slate-700">Description</span>
 							<textarea className="form-field min-h-24" id="todoDescription" name="description" onChange={(event) => onFormChange('description', event.target.value)} placeholder="Describe the todo" value={form.description} />
 						</label>
 
-						<label className="block">
+						<label className="employee-todo-form-row-field block">
 							<span className="mb-1 block text-sm font-bold text-slate-700">Related project</span>
 							<select className="form-field" id="todoProjectId" name="projectId" onChange={(event) => handleProjectChange(event.target.value)} value={form.projectId}>
 								<option value="">No related project</option>
@@ -353,7 +354,7 @@ const TodoList = () => {
 							</select>
 						</label>
 
-						<label className="block">
+						<label className="employee-todo-form-row-field block">
 							<span className="mb-1 block text-sm font-bold text-slate-700">Related task</span>
 							<select className="form-field" id="todoTaskId" name="taskId" onChange={(event) => handleTaskChange(event.target.value)} value={form.taskId}>
 								<option value="">No related task</option>
@@ -363,12 +364,12 @@ const TodoList = () => {
 							</select>
 						</label>
 
-						<label className="block">
+						<label className="employee-todo-form-row-field block">
 							<span className="mb-1 block text-sm font-bold text-slate-700">Due date</span>
 							<input className="form-field" id="todoDueDate" name="dueDate" onChange={(event) => onFormChange('dueDate', event.target.value)} type="date" value={form.dueDate} />
 						</label>
 
-						<label className="block">
+						<label className="employee-todo-form-row-field block">
 							<span className="mb-1 block text-sm font-bold text-slate-700">Priority</span>
 							<select className="form-field" id="todoPriority" name="priority" onChange={(event) => onFormChange('priority', event.target.value)} value={form.priority}>
 								<option value="low">Low</option>
@@ -387,13 +388,14 @@ const TodoList = () => {
 				</form>
 			</section>
 
+			<div className="employee-todo-filterbar">
 			<SearchFilterBar search={search} setSearch={setSearch} searchId="todoSearch" searchName="todoSearch">
 				<div className="flex flex-wrap gap-2">
 					{categoryOptions.map((option) => {
 						const isActive = activeCategory === option.key;
 						return (
 							<button
-								className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'border-brand bg-brand text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink'}`}
+								className={`employee-todo-filter-pill rounded-full border px-4 py-2 text-sm font-semibold transition ${isActive ? 'employee-todo-filter-pill-active border-brand bg-brand text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-ink'}`}
 								key={option.key}
 								onClick={() => setActiveCategory(option.key)}
 								type="button"
@@ -404,9 +406,10 @@ const TodoList = () => {
 					})}
 				</div>
 			</SearchFilterBar>
+			</div>
 
 			<section className="grid gap-4 xl:grid-cols-2">
-				<div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+				<div className="employee-todo-list-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
 					<h3 className="text-lg font-black text-slate-950">Todo List</h3>
 					<p className="mt-1 text-sm text-slate-600">Each todo includes a checkbox, due date, priority, and status controls.</p>
 
@@ -416,13 +419,13 @@ const TodoList = () => {
 						) : filteredTodos.length ? (
 							filteredTodos.map(todoCard)
 						) : (
-							<p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">No todos match the current category or search.</p>
+							<p className="employee-todo-empty rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-600">No todos match the current category or search.</p>
 						)}
 					</div>
 				</div>
 
 				<div className="space-y-4">
-					<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+					<section className="employee-todo-side-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
 						<h3 className="text-lg font-black text-slate-950">Todo Categories</h3>
 						<div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 							{[
@@ -433,7 +436,7 @@ const TodoList = () => {
 								['Overdue todos', summary.overdue],
 								['Completed todos', summary.completed]
 							].map(([label, value]) => (
-								<button className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left" key={label} type="button" onClick={() => setActiveCategory(label.toLowerCase().includes('today') ? 'today' : label.toLowerCase().includes('overdue') ? 'overdue' : label.toLowerCase().includes('personal') ? 'personal' : label.toLowerCase().includes('project') ? 'project' : label.toLowerCase().includes('task') ? 'task' : label.toLowerCase().includes('completed') ? 'completed' : 'all')}>
+								<button className="employee-todo-category-card rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left" key={label} type="button" onClick={() => setActiveCategory(label.toLowerCase().includes('today') ? 'today' : label.toLowerCase().includes('overdue') ? 'overdue' : label.toLowerCase().includes('personal') ? 'personal' : label.toLowerCase().includes('project') ? 'project' : label.toLowerCase().includes('task') ? 'task' : label.toLowerCase().includes('completed') ? 'completed' : 'all')}>
 									<p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">{label}</p>
 									<p className="mt-1 text-2xl font-black text-slate-950">{value}</p>
 								</button>
@@ -441,12 +444,12 @@ const TodoList = () => {
 						</div>
 					</section>
 
-					<section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+					<section className="employee-todo-side-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
 						<h3 className="text-lg font-black text-slate-950">Completed Todo Section</h3>
 						<div className="mt-4 space-y-3">
 							{completedTodos.length ? (
 								completedTodos.map((todo) => (
-									<article className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4" key={todo._id}>
+									<article className="employee-todo-completed-card rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4" key={todo._id}>
 										<div className="flex flex-wrap items-start justify-between gap-3">
 											<div>
 												<p className="text-sm font-black text-slate-950">{todo.title}</p>
@@ -458,12 +461,13 @@ const TodoList = () => {
 									</article>
 								))
 							) : (
-								<p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">No completed todos yet.</p>
+								<p className="employee-todo-empty rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">No completed todos yet.</p>
 							)}
 						</div>
 					</section>
 				</div>
 			</section>
+			</div>
 		</ModulePage>
 	);
 };

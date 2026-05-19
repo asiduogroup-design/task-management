@@ -1125,6 +1125,236 @@
   cursor: not-allowed;
 }
 
+/* Todo list page */
+.employee-page .employee-todo-page {
+  --todo-border: rgba(148, 163, 184, 0.28);
+  --todo-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.employee-page .employee-todo-page .employee-todo-hero,
+.employee-page .employee-todo-page .employee-todo-list-panel,
+.employee-page .employee-todo-page .employee-todo-side-panel {
+  border: 1px solid var(--todo-border);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.88));
+  box-shadow: var(--todo-shadow);
+}
+
+.employee-page .employee-todo-page .employee-todo-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.employee-page .employee-todo-page .employee-todo-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(37, 99, 235, 0.08), transparent 34%),
+    linear-gradient(135deg, transparent 58%, rgba(13, 148, 136, 0.09));
+  pointer-events: none;
+}
+
+.employee-page .employee-todo-page .employee-todo-hero > * {
+  position: relative;
+}
+
+.employee-page .employee-todo-page .employee-todo-mini-stat,
+.employee-page .employee-todo-page .employee-todo-category-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.86));
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.employee-page .employee-todo-page .employee-todo-mini-stat:hover,
+.employee-page .employee-todo-page .employee-todo-category-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
+}
+
+.employee-page .employee-todo-page .employee-todo-form {
+  border-color: rgba(203, 213, 225, 0.78);
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(239, 246, 255, 0.72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.employee-page .employee-todo-page .employee-todo-form label span {
+  color: #475569;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.employee-page .employee-todo-page .employee-todo-form .form-field {
+  min-height: 3rem;
+  border-radius: 0.82rem;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.employee-page .employee-todo-page .employee-todo-form textarea.form-field {
+  min-height: 5.2rem;
+}
+
+@media (min-width: 1280px) {
+  .employee-page .employee-todo-page .employee-todo-form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .employee-page .employee-todo-page .employee-todo-form-row-field {
+    grid-column: span 1 / span 1;
+  }
+}
+
+.employee-page .employee-todo-page .employee-todo-filterbar > div {
+  border-radius: 1.1rem;
+  border-color: rgba(203, 213, 225, 0.74);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+}
+
+.employee-page .employee-todo-page .employee-todo-filter-pill {
+  min-height: 2.4rem;
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.88);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.employee-page .employee-todo-page .employee-todo-filter-pill-active {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24);
+}
+
+.employee-page .employee-todo-page .employee-todo-list-panel,
+.employee-page .employee-todo-page .employee-todo-side-panel {
+  overflow: hidden;
+}
+
+.employee-page .employee-todo-page .employee-todo-item {
+  border-color: rgba(203, 213, 225, 0.82);
+  background: rgba(255, 255, 255, 0.92);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.employee-page .employee-todo-page .employee-todo-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.26);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+}
+
+.employee-page .employee-todo-page .employee-todo-item-completed {
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.94), rgba(255, 255, 255, 0.96));
+  border-color: rgba(16, 185, 129, 0.24);
+}
+
+.employee-page .employee-todo-page .employee-todo-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 0.32rem;
+  border: 1.8px solid rgba(100, 116, 139, 0.48);
+  background: #fff;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.employee-page .employee-todo-page .employee-todo-check::after {
+  content: '';
+  width: 0.56rem;
+  height: 0.32rem;
+  border: 2px solid transparent;
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg) scale(0);
+  transition: transform 140ms ease;
+}
+
+.employee-page .employee-todo-page .employee-todo-check:checked {
+  border-color: #0d9488;
+  background: #0d9488;
+}
+
+.employee-page .employee-todo-page .employee-todo-check:checked::after {
+  border-color: #fff;
+  transform: rotate(-45deg) scale(1);
+}
+
+.employee-page .employee-todo-page .employee-todo-item-title {
+  font-family: var(--employee-font-body);
+  letter-spacing: 0;
+}
+
+.employee-page .employee-todo-page .employee-todo-meta {
+  border-top: 1px solid rgba(226, 232, 240, 0.86);
+  padding-top: 0.75rem;
+}
+
+.employee-page .employee-todo-page .employee-todo-action {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.85);
+  padding: 0.32rem 0.72rem;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.employee-page .employee-todo-page .employee-todo-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.employee-page .employee-todo-page .employee-todo-action:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.employee-page .employee-todo-page .employee-todo-action-blue {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: rgba(239, 246, 255, 0.9);
+}
+
+.employee-page .employee-todo-page .employee-todo-action-green {
+  border-color: rgba(16, 185, 129, 0.22);
+  background: rgba(236, 253, 245, 0.92);
+}
+
+.employee-page .employee-todo-page .employee-todo-action-danger {
+  border-color: rgba(225, 29, 72, 0.22);
+  background: rgba(255, 241, 242, 0.9);
+}
+
+.employee-page .employee-todo-page .employee-todo-category-card {
+  min-height: 5rem;
+}
+
+.employee-page .employee-todo-page .employee-todo-completed-card {
+  border-color: rgba(16, 185, 129, 0.28);
+  background:
+    linear-gradient(135deg, rgba(236, 253, 245, 0.98), rgba(240, 253, 250, 0.82));
+  box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.58);
+}
+
+.employee-page .employee-todo-page .employee-todo-empty {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(248, 250, 252, 0.76);
+  text-align: center;
+}
+
+@media (min-width: 1280px) {
+  .employee-page .employee-todo-page > section.grid:last-child {
+    grid-template-columns: minmax(0, 1.25fr) minmax(24rem, 0.9fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .employee-page .employee-todo-page .employee-todo-hero,
+  .employee-page .employee-todo-page .employee-todo-list-panel,
+  .employee-page .employee-todo-page .employee-todo-side-panel {
+    padding: 1rem;
+  }
+}
+
 /* Daily work update page */
 .employee-page .employee-daily-update {
   --daily-border: rgba(148, 163, 184, 0.28);

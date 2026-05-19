@@ -10,6 +10,16 @@ const dashboardByRole = {
   employee: '/employee/dashboard'
 };
 
+const getStoredToken = () => localStorage.getItem('ewms_token') || sessionStorage.getItem('ewms_token');
+const getStoredUser = () => localStorage.getItem('ewms_user') || sessionStorage.getItem('ewms_user');
+
+const clearStoredAuth = () => {
+  localStorage.removeItem('ewms_token');
+  localStorage.removeItem('ewms_user');
+  sessionStorage.removeItem('ewms_token');
+  sessionStorage.removeItem('ewms_user');
+};
+
 export const roleLabels = {
   super_admin: 'Super Admin',
   admin: 'Admin / HR',
@@ -21,16 +31,20 @@ export const getDashboardPath = (role) => dashboardByRole[role] || '/login';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('ewms_user');
+    const stored = getStoredUser();
     return stored ? JSON.parse(stored) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('ewms_token'));
+  const [token, setToken] = useState(() => getStoredToken());
   const [loading, setLoading] = useState(true);
 
   const persist = useCallback((data, remember = true) => {
+    clearStoredAuth();
     if (remember) {
       localStorage.setItem('ewms_token', data.token);
       localStorage.setItem('ewms_user', JSON.stringify(data.user));
+    } else {
+      sessionStorage.setItem('ewms_token', data.token);
+      sessionStorage.setItem('ewms_user', JSON.stringify(data.user));
     }
     setToken(data.token);
     setUser(data.user);
@@ -47,21 +61,21 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      if (localStorage.getItem('ewms_token')) await authService.logout();
+      if (getStoredToken()) await authService.logout();
     } catch (error) {
       // Local cleanup still matters if the server is unavailable.
     }
-    localStorage.removeItem('ewms_token');
-    localStorage.removeItem('ewms_user');
+    clearStoredAuth();
     setToken(null);
     setUser(null);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!localStorage.getItem('ewms_token')) return null;
+    if (!getStoredToken()) return null;
     const { data } = await authService.me();
     setUser(data.user);
-    localStorage.setItem('ewms_user', JSON.stringify(data.user));
+    const storage = localStorage.getItem('ewms_token') ? localStorage : sessionStorage;
+    storage.setItem('ewms_user', JSON.stringify(data.user));
     return data.user;
   }, []);
 
@@ -74,7 +88,8 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data } = await authService.me();
         setUser(data.user);
-        localStorage.setItem('ewms_user', JSON.stringify(data.user));
+        const storage = localStorage.getItem('ewms_token') ? localStorage : sessionStorage;
+        storage.setItem('ewms_user', JSON.stringify(data.user));
       } catch (error) {
         await logout();
       } finally {

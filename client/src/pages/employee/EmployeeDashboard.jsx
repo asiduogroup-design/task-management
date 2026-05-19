@@ -55,7 +55,6 @@ const formatMinutesToHoursMins = (mins) => {
   return `${rem} mins`;
 };
 
-const employeeOverviewDisabledKey = 'ewms_employee_overview_disabled';
 const priorityRank = { urgent: 4, high: 3, medium: 2, low: 1 };
 const employeeNotificationSections = [
   {
@@ -322,20 +321,9 @@ const EmployeeDashboard = () => {
     };
 
     try {
-      const shouldSkipOverview = localStorage.getItem(employeeOverviewDisabledKey) === 'true';
-
-      if (shouldSkipOverview) {
-        await loadFallback();
-        return;
-      }
-
       const { data: payload } = await dashboardService.getEmployeeOverview();
       applyPayload(payload);
     } catch (error) {
-      if (error?.response?.status === 403) {
-        localStorage.setItem(employeeOverviewDisabledKey, 'true');
-      }
-
       try {
         await loadFallback();
       } catch (fallbackError) {

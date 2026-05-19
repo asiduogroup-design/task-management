@@ -208,9 +208,9 @@ export const getAttendanceOverview = asyncHandler(async (req, res) => {
   const formattedAttendance = attendance.map(record => ({
     _id: record._id,
     employee: record.employeeId?.userId?.name || 'Unknown',
-    loginTime: record.loginTime ? new Date(record.loginTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
-    logoutTime: record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-',
-    totalWorkingHours: (record.totalWorkingHours || 0).toFixed(2),
+    loginTime: record.loginTime || null,
+    logoutTime: record.logoutTime || null,
+    totalWorkingHours: Number(record.totalWorkingHours || 0).toFixed(2),
     status: record.status
   }));
 
@@ -479,6 +479,10 @@ export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
     Notification.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(20).lean()
   ]);
 
+  const sessions = Array.isArray(attendance?.sessions) ? attendance.sessions : [];
+  const firstSession = sessions.length > 0 ? sessions[0] : null;
+  const lastSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+
   const projectIds = [...new Set(projectMembers.map((member) => member.projectId?._id).filter(Boolean).map((id) => String(id)))];
   const projectTaskStats = await Promise.all(
     projectIds.map(async (projectId) => {
@@ -549,8 +553,9 @@ export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
     },
     loginLogout: {
       status: attendance?.status || 'not_logged_in',
-      loginTime: attendance?.loginTime || null,
-      logoutTime: attendance?.logoutTime || null,
+      loginTime: attendance?.loginTime || firstSession?.loginTime || null,
+      logoutTime: attendance?.logoutTime || lastSession?.logoutTime || null,
+      sessions,
       breakStartTime: attendance?.breakStartTime || null,
       breakEndTime: attendance?.breakEndTime || null,
       breaks: attendance?.breaks || [],

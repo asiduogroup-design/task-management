@@ -26,7 +26,24 @@ const statusLabel = {
 
 const prettyDate = (value) => (value ? new Date(value).toLocaleDateString() : '-');
 
-const prettyTime = (value) => (value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-');
+const prettyTime = (value) => {
+  if (!value) return '-';
+
+  // Keep preformatted values untouched.
+  if (typeof value === 'string' && /\b\d{1,2}:\d{2}\s?(AM|PM)\b/i.test(value)) {
+    return value;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
+  });
+};
 
 // Format minutes as 'X hrs Y mins'
 const formatMinutesToHoursMins = (mins) => {
@@ -220,6 +237,9 @@ const EmployeeDashboard = () => {
 
     const today = new Date();
     const attendanceRecord = attendanceRes.data?.attendance;
+    const fallbackSessions = Array.isArray(attendanceRecord?.sessions) ? attendanceRecord.sessions : [];
+    const fallbackFirstSession = fallbackSessions.length > 0 ? fallbackSessions[0] : null;
+    const fallbackLastSession = fallbackSessions.length > 0 ? fallbackSessions[fallbackSessions.length - 1] : null;
     const tasks = tasksRes.data?.tasks || [];
     const projects = projectsRes.data?.projects || [];
     const notifications = notificationsRes.data?.notifications || [];
@@ -235,8 +255,9 @@ const EmployeeDashboard = () => {
       },
       loginLogout: {
         status: attendanceRecord?.status || attendanceRes.data?.status || 'not_logged_in',
-        loginTime: attendanceRecord?.loginTime || null,
-        logoutTime: attendanceRecord?.logoutTime || null,
+        loginTime: attendanceRecord?.loginTime || fallbackFirstSession?.loginTime || null,
+        logoutTime: attendanceRecord?.logoutTime || fallbackLastSession?.logoutTime || null,
+        sessions: attendanceRecord?.sessions || [],
         breakStartTime: attendanceRecord?.breakStartTime || null,
         breakEndTime: attendanceRecord?.breakEndTime || null,
         breaks: attendanceRecord?.breaks || [],
@@ -331,6 +352,10 @@ const EmployeeDashboard = () => {
 
   const attendance = data?.loginLogout || {};
   const currentStatus = attendance.status || 'not_logged_in';
+  // Calculate total working hours from all sessions
+  const allSessions = attendance.sessions || [];
+  const totalSessionMinutes = allSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+  const totalWorkingHours = Number(((totalSessionMinutes - (attendance.totalBreakMinutes || 0)) / 60).toFixed(2));
 
   const taskStats = useMemo(() => {
     const list = data?.todayTasks || [];
@@ -639,9 +664,9 @@ const EmployeeDashboard = () => {
           </div>
             <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live status: <span className="employee-live-status">{statusLabel[currentStatus] || currentStatus}</span></p>
             <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
-              <p><span className="text-slate-500">Today's login time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.loginTime)}</span></p>
-              <p><span className="text-slate-500">Today's logout time:</span> <span className="font-semibold text-ink">{prettyTime(attendance.logoutTime)}</span></p>
-              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{formatMinutesToHoursMins(attendance.totalWorkingHours)}</span></p>
+              <p><span className="text-slate-500">Today's sessions:</span> <span className="font-semibold text-ink">{allSessions.length > 0 ? allSessions.map((s, i) => `${prettyTime(s.loginTime)} - ${s.logoutTime ? prettyTime(s.logoutTime) : '...'}`).join(', ') : '-'}</span></p>
+              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{formatMinutesToHoursMins(totalSessionMinutes)}</span></p>
+              <p><span className="text-slate-500">Break time (min):</span> <span className="font-semibold text-ink">{attendance.totalBreakMinutes ?? 0}</span></p>
             </div>
             {attendanceGraph && (
             <div className="employee-attendance-graph mt-4">

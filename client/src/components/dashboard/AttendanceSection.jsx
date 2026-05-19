@@ -1,6 +1,25 @@
 import StatusBadge from '../common/StatusBadge.jsx';
 import DataTable from '../common/DataTable.jsx';
 
+const formatTime = (value) => {
+  if (!value || value === '-') return '-';
+
+  // Keep preformatted values untouched.
+  if (typeof value === 'string' && /\b\d{1,2}:\d{2}\s?(AM|PM)\b/i.test(value)) {
+    return value;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+};
+
 const AttendanceSection = ({ attendance }) => {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -10,17 +29,17 @@ const AttendanceSection = ({ attendance }) => {
           { 
             key: 'employee', 
             label: 'Employee', 
-            render: (row) => row.employeeId?.userId?.name || '-' 
+            render: (row) => row.employee || row.employeeId?.userId?.name || '-' 
           },
           { 
             key: 'loginTime', 
             label: 'Login', 
-            render: (row) => row.loginTime ? new Date(row.loginTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-' 
+            render: (row) => formatTime(row.loginTime) 
           },
           { 
             key: 'logoutTime', 
             label: 'Logout', 
-            render: (row) => row.logoutTime ? new Date(row.logoutTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-' 
+            render: (row) => formatTime(row.logoutTime) 
           },
           { 
             key: 'totalWorkingHours', 

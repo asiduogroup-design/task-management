@@ -51,10 +51,11 @@ const resolveDateRange = ({ datePreset, from, to }) => {
 };
 
 const safeText = (value) => String(value || '').trim();
+const timeFormatOptions = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' };
 
 const formatTime = (value) => {
   if (!value) return '-';
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(value).toLocaleTimeString([], timeFormatOptions);
 };
 
 const hoursLabel = (value) => `${Number(value || 0).toFixed(2)} hrs`;
@@ -335,8 +336,8 @@ const buildAttendanceReport = async (query, dateRange) => {
     employeeName: record.employeeId?.userId?.name || record.employeeId?.employeeCode || '-',
     department: record.employeeId?.department || '-',
     date: record.date ? new Date(record.date).toLocaleDateString() : '-',
-    loginTime: record.loginTime ? new Date(record.loginTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-    logoutTime: record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+    loginTime: formatTime(record.loginTime),
+    logoutTime: formatTime(record.logoutTime),
     totalWorkingHours: Number(record.totalWorkingHours || 0).toFixed(2),
     status: record.status || 'not_logged_in'
   }));
@@ -559,8 +560,8 @@ const buildLoginLogoutReport = async (query, dateRange) => {
     employeeName: record.employeeId?.userId?.name || record.employeeId?.employeeCode || '-',
     department: record.employeeId?.department || '-',
     date: record.date ? new Date(record.date).toLocaleDateString() : '-',
-    loginTime: record.loginTime ? new Date(record.loginTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-    logoutTime: record.logoutTime ? new Date(record.logoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+    loginTime: formatTime(record.loginTime),
+    logoutTime: formatTime(record.logoutTime),
     totalWorkingHours: Number(record.totalWorkingHours || 0).toFixed(2),
     status: record.status || '-'
   }));

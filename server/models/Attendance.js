@@ -9,12 +9,21 @@ const breakEntrySchema = new mongoose.Schema(
   { _id: false }
 );
 
+
+const sessionSchema = new mongoose.Schema(
+  {
+    loginTime: { type: Date, required: true },
+    logoutTime: { type: Date },
+    durationMinutes: { type: Number, default: 0 }
+  },
+  { _id: false }
+);
+
 const attendanceSchema = new mongoose.Schema(
   {
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
     date: { type: Date, required: true },
-    loginTime: Date,
-    logoutTime: Date,
+    sessions: { type: [sessionSchema], default: [] },
     breakStartTime: Date,
     breakEndTime: Date,
     totalBreakMinutes: { type: Number, default: 0 },

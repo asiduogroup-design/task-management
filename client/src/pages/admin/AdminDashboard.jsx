@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout.jsx';
 import LoadingScreen from '../../components/LoadingScreen.jsx';
 import { dashboardService } from '../../services/dashboardService.js';
+import { attendanceService } from '../../services/attendanceService.js';
 import SummaryCards from '../../components/dashboard/SummaryCards.jsx';
 import AttendanceSection from '../../components/dashboard/AttendanceSection.jsx';
 import ProjectsSection from '../../components/dashboard/ProjectsSection.jsx';
@@ -23,17 +24,35 @@ const AdminDashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+
+        // Build today's ISO date string for the attendance filter.
+        const todayStr = new Date().toISOString().slice(0, 10);
+
         const [summary, attendance, projects, tasks, alerts] = await Promise.all([
           dashboardService.getSummary(),
-          dashboardService.getAttendance(),
+          // Use the raw attendance/admin endpoint so login/logout times are raw
+          // ISO timestamps that the browser formats in the local timezone —
+          // matching what the employee dashboard already shows.
+          attendanceService.admin({ fromDate: todayStr, toDate: todayStr }),
           dashboardService.getProjects(),
           dashboardService.getTasks(),
           dashboardService.getAlerts()
         ]);
 
+        // Normalize the raw records to the shape AttendanceSection expects.
+        const rawRecords = attendance.data?.records || [];
+        const attendanceRows = rawRecords.map((rec) => ({
+          _id: rec._id,
+          employee: rec.employeeId?.userId?.name || rec.employeeId?.employeeCode || 'Unknown',
+          loginTime: rec.loginTime || null,
+          logoutTime: rec.logoutTime || null,
+          totalWorkingHours: rec.totalWorkingHours || 0,
+          status: rec.status
+        }));
+
         setData({
           summary: summary.data.summary || {},
-          attendance: attendance.data.attendance || [],
+          attendance: attendanceRows,
           projects: projects.data.projects || [],
           tasks: tasks.data || {},
           alerts: alerts.data.alerts || {}

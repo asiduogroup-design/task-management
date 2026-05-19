@@ -14,11 +14,13 @@ const requireEmployee = (req) => {
 export const attendanceLogin = asyncHandler(async (req, res) => {
   const employee = requireEmployee(req);
   const today = dateOnly();
-  const existing = await Attendance.findOne({ employeeId: employee._id, date: today });
+  const attendance = await Attendance.findOne({ employeeId: employee._id, date: today }) || new Attendance({ employeeId: employee._id, date: today });
 
-  if (existing?.loginTime) {
+  // If last session is open (no logout), block new login
+  const lastSession = attendance.sessions.length > 0 ? attendance.sessions[attendance.sessions.length - 1] : null;
+  if (lastSession && !lastSession.logoutTime) {
     res.status(409);
-    throw new Error('Employee already logged in today');
+    throw new Error('Already logged in. Please logout before new login.');
   }
 
   const settings = await Settings.findOne();
@@ -28,8 +30,7 @@ export const attendanceLogin = asyncHandler(async (req, res) => {
   const lateDate = new Date(today);
   lateDate.setHours(hour, minute, 0, 0);
 
-  const attendance = existing || new Attendance({ employeeId: employee._id, date: today });
-  attendance.loginTime = now;
+  attendance.sessions.push({ loginTime: now });
   attendance.status = now > lateDate ? 'late' : 'logged_in';
   attendance.ipAddress = req.ip;
   attendance.deviceInfo = req.headers['user-agent'] || '';
@@ -42,13 +43,14 @@ export const attendanceLogout = asyncHandler(async (req, res) => {
   const employee = requireEmployee(req);
   const attendance = await Attendance.findOne({ employeeId: employee._id, date: dateOnly() });
 
-  if (!attendance?.loginTime) {
+  if (!attendance || attendance.sessions.length === 0) {
     res.status(400);
     throw new Error('Login is required before logout');
   }
-  if (attendance.logoutTime) {
+  const lastSession = attendance.sessions[attendance.sessions.length - 1];
+  if (!lastSession || lastSession.logoutTime) {
     res.status(409);
-    throw new Error('Employee already logged out today');
+    throw new Error('No active session to logout');
   }
 
   const now = new Date();
@@ -58,10 +60,13 @@ export const attendanceLogout = asyncHandler(async (req, res) => {
   const shiftEnd = new Date(dateOnly());
   shiftEnd.setHours(eh, em, 0, 0);
 
-  attendance.logoutTime = now;
+  lastSession.logoutTime = now;
+  lastSession.durationMinutes = Math.max(0, Math.round((now - new Date(lastSession.loginTime)) / 60000));
   attendance.earlyLogout = now < shiftEnd;
   attendance.status = 'logged_out';
-  attendance.totalWorkingHours = calculateWorkingHours(attendance.loginTime, attendance.logoutTime, attendance.totalBreakMinutes);
+  // Sum all session durations for totalWorkingHours
+  const totalSessionMinutes = attendance.sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+  attendance.totalWorkingHours = Number(((totalSessionMinutes - (attendance.totalBreakMinutes || 0)) / 60).toFixed(2));
   await attendance.save();
 
   res.json({ attendance });
@@ -274,7 +279,7 @@ export const exportAttendance = asyncHandler(async (req, res) => {
     records = records.filter((r) => r.employeeId?.department?.toLowerCase() === normalized);
   }
 
-  const formatTime = (val) => (val ? new Date(val).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '');
+  const formatTime = (val) => (val ? new Date(val).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : '');
   const formatDate = (val) => (val ? new Date(val).toLocaleDateString('en-IN') : '');
 
   const headers = ['Date', 'Employee ID', 'Employee Name', 'Department', 'Designation', 'Login Time', 'Logout Time', 'Total Working Hours', 'Break Minutes', 'Status', 'Early Logout', 'Remarks'];

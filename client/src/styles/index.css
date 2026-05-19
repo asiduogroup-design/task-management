@@ -127,6 +127,42 @@ a {
   background: rgba(255, 255, 255, 1);
 }
 
+.password-field-wrap {
+  position: relative;
+  display: block;
+}
+
+.password-field-input {
+  padding-right: 3rem;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.72rem;
+  top: 50%;
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.password-toggle-btn:hover {
+  background: rgba(226, 232, 240, 0.72);
+  color: #1d4ed8;
+}
+
+.password-toggle-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
 .btn-primary,
 .btn-secondary {
   display: inline-flex;

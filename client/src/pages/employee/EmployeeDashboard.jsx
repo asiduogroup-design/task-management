@@ -355,7 +355,6 @@ const EmployeeDashboard = () => {
   // Calculate total working hours from all sessions
   const allSessions = attendance.sessions || [];
   const totalSessionMinutes = allSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-  const totalWorkingHours = Number(((totalSessionMinutes - (attendance.totalBreakMinutes || 0)) / 60).toFixed(2));
 
   const taskStats = useMemo(() => {
     const list = data?.todayTasks || [];
@@ -522,6 +521,17 @@ const EmployeeDashboard = () => {
     };
   }, [attendance.breakEndTime, attendance.breakStartTime, attendance.breaks, attendance.loginTime, attendance.logoutTime, currentStatus]);
 
+  const totalWorkingMinutes = useMemo(() => {
+    if (totalSessionMinutes > 0) return totalSessionMinutes;
+
+    if (attendanceGraph?.totalWorkMin > 0) {
+      return attendanceGraph.totalWorkMin;
+    }
+
+    const hoursBasedMinutes = Math.round((Number(attendance.totalWorkingHours || 0) * 60));
+    return Math.max(0, hoursBasedMinutes);
+  }, [attendance.totalWorkingHours, attendanceGraph?.totalWorkMin, totalSessionMinutes]);
+
   const runAttendanceAction = async (kind) => {
     setActionBusy(kind);
     setMessage('');
@@ -665,56 +675,59 @@ const EmployeeDashboard = () => {
             <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Live status: <span className="employee-live-status">{statusLabel[currentStatus] || currentStatus}</span></p>
             <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
               <p><span className="text-slate-500">Today's sessions:</span> <span className="font-semibold text-ink">{allSessions.length > 0 ? allSessions.map((s, i) => `${prettyTime(s.loginTime)} - ${s.logoutTime ? prettyTime(s.logoutTime) : '...'}`).join(', ') : '-'}</span></p>
-              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{formatMinutesToHoursMins(totalSessionMinutes)}</span></p>
+              <p><span className="text-slate-500">Total working hours:</span> <span className="font-semibold text-ink">{formatMinutesToHoursMins(totalWorkingMinutes)}</span></p>
               <p><span className="text-slate-500">Break time (min):</span> <span className="font-semibold text-ink">{attendance.totalBreakMinutes ?? 0}</span></p>
             </div>
-            {attendanceGraph && (
             <div className="employee-attendance-graph mt-4">
               <p className="employee-attendance-graph-title">Day activity graph</p>
+              {attendanceGraph ? (
+                <>
+                  {/* ── Bar ── */}
+                  <div className="employee-attendance-bar-track" role="img" aria-label="Login to logout timeline">
+                    {/* work fill (whole bar = blue) */}
+                    <span className="employee-attendance-bar-work" />
+                    {/* break overlays (amber) */}
+                    {attendanceGraph.breakPct.map((seg, index) => (
+                      <span
+                        className="employee-attendance-bar-break"
+                        key={`break-${index}`}
+                        style={{ left: `${seg.left}%`, width: `${seg.width}%` }}
+                      />
+                    ))}
+                    {/* live pulse at right edge when not logged out */}
+                    {attendanceGraph.isLive && <span className="employee-attendance-bar-live" />}
+                  </div>
 
-              {/* ── Bar ── */}
-              <div className="employee-attendance-bar-track" role="img" aria-label="Login to logout timeline">
-                {/* work fill (whole bar = blue) */}
-                <span className="employee-attendance-bar-work" />
-                {/* break overlays (amber) */}
-                {attendanceGraph.breakPct.map((seg, index) => (
-                  <span
-                    className="employee-attendance-bar-break"
-                    key={`break-${index}`}
-                    style={{ left: `${seg.left}%`, width: `${seg.width}%` }}
-                  />
-                ))}
-                {/* live pulse at right edge when not logged out */}
-                {attendanceGraph.isLive && <span className="employee-attendance-bar-live" />}
-              </div>
+                  {/* ── Time labels ── */}
+                  <div className="employee-attendance-bar-labels">
+                    <span className="employee-attendance-bar-label-login">
+                      <span className="employee-attendance-label-dot employee-attendance-label-dot-login" />
+                      Login · {attendanceGraph.loginTime}
+                    </span>
+                    <span className="employee-attendance-bar-label-logout">
+                      {attendanceGraph.logoutLabel} · {attendanceGraph.logoutTime}
+                      <span className="employee-attendance-label-dot employee-attendance-label-dot-logout" />
+                    </span>
+                  </div>
 
-              {/* ── Time labels ── */}
-              <div className="employee-attendance-bar-labels">
-                <span className="employee-attendance-bar-label-login">
-                  <span className="employee-attendance-label-dot employee-attendance-label-dot-login" />
-                  Login · {attendanceGraph.loginTime}
-                </span>
-                <span className="employee-attendance-bar-label-logout">
-                  {attendanceGraph.logoutLabel} · {attendanceGraph.logoutTime}
-                  <span className="employee-attendance-label-dot employee-attendance-label-dot-logout" />
-                </span>
-              </div>
-
-              {/* ── Legend ── */}
-              <div className="employee-attendance-bar-legend">
-                <span className="employee-attendance-legend-chip employee-attendance-legend-work">
-                  <span className="employee-attendance-legend-swatch employee-attendance-legend-work-swatch" />
-                  Work · {formatMinutesToHoursMins(attendanceGraph.totalWorkMin)}
-                </span>
-                {attendanceGraph.totalBreakMin > 0 && (
-                  <span className="employee-attendance-legend-chip employee-attendance-legend-break">
-                    <span className="employee-attendance-legend-swatch employee-attendance-legend-break-swatch" />
-                    Break · {attendanceGraph.totalBreakMin}m
-                  </span>
-                )}
-              </div>
+                  {/* ── Legend ── */}
+                  <div className="employee-attendance-bar-legend">
+                    <span className="employee-attendance-legend-chip employee-attendance-legend-work">
+                      <span className="employee-attendance-legend-swatch employee-attendance-legend-work-swatch" />
+                      Work · {formatMinutesToHoursMins(attendanceGraph.totalWorkMin)}
+                    </span>
+                    {attendanceGraph.totalBreakMin > 0 && (
+                      <span className="employee-attendance-legend-chip employee-attendance-legend-break">
+                        <span className="employee-attendance-legend-swatch employee-attendance-legend-break-swatch" />
+                        Break · {attendanceGraph.totalBreakMin}m
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-500">No activity recorded for today yet. The graph appears after first login.</p>
+              )}
             </div>
-          )}
 
           </div>
           {/* Summary Card */}

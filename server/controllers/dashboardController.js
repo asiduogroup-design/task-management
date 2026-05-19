@@ -480,8 +480,26 @@ export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
   ]);
 
   const sessions = Array.isArray(attendance?.sessions) ? attendance.sessions : [];
-  const firstSession = sessions.length > 0 ? sessions[0] : null;
-  const lastSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+  const normalizedSessions = (() => {
+    if (sessions.length > 0) return sessions;
+    if (!attendance?.loginTime) return [];
+
+    const login = new Date(attendance.loginTime);
+    const logout = attendance.logoutTime ? new Date(attendance.logoutTime) : null;
+    const end = logout || new Date();
+    const durationMinutes = Number.isNaN(login.getTime())
+      ? 0
+      : Math.max(0, Math.round((end - login) / 60000));
+
+    return [{
+      loginTime: attendance.loginTime,
+      logoutTime: attendance.logoutTime || null,
+      durationMinutes
+    }];
+  })();
+
+  const firstSession = normalizedSessions.length > 0 ? normalizedSessions[0] : null;
+  const lastSession = normalizedSessions.length > 0 ? normalizedSessions[normalizedSessions.length - 1] : null;
 
   const projectIds = [...new Set(projectMembers.map((member) => member.projectId?._id).filter(Boolean).map((id) => String(id)))];
   const projectTaskStats = await Promise.all(
@@ -555,7 +573,7 @@ export const getEmployeeDashboardOverview = asyncHandler(async (req, res) => {
       status: attendance?.status || 'not_logged_in',
       loginTime: attendance?.loginTime || firstSession?.loginTime || null,
       logoutTime: attendance?.logoutTime || lastSession?.logoutTime || null,
-      sessions,
+      sessions: normalizedSessions,
       breakStartTime: attendance?.breakStartTime || null,
       breakEndTime: attendance?.breakEndTime || null,
       breaks: attendance?.breaks || [],

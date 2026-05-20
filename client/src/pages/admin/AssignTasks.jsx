@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DataTable from '../../components/common/DataTable.jsx';
 import SearchFilterBar from '../../components/common/SearchFilterBar.jsx';
 import StatusBadge from '../../components/common/StatusBadge.jsx';
@@ -10,6 +11,8 @@ import ModulePage from '../shared/ModulePage.jsx';
 const allowedAssigneeRoles = ['manager', 'employee'];
 
 const AssignTasks = () => {
+  const [searchParams] = useSearchParams();
+  const preselectedEmployeeId = searchParams.get('employeeId') || '';
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -89,6 +92,18 @@ const AssignTasks = () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!preselectedEmployeeId || !tasks.length) return;
+
+    setSelectedByTask((current) => {
+      const next = { ...current };
+      tasks.forEach((task) => {
+        next[task._id] = preselectedEmployeeId;
+      });
+      return next;
+    });
+  }, [preselectedEmployeeId, tasks]);
 
   const handleReassign = async (task) => {
     const selectedEmployeeId = selectedByTask[task._id] || '';

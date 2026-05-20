@@ -119,8 +119,8 @@ const EmployeeManagement = () => {
               <div className="flex flex-wrap gap-x-3 gap-y-1">
                 <Link className="font-bold text-blue-700" to={`/admin/employees/${row._id}`}>View profile</Link>
                 <Link className="font-bold text-slate-700" to={`/admin/employees/${row._id}/edit`}>Edit details</Link>
-                <Link className="font-bold text-slate-700" to={`/admin/projects/add?employeeId=${row._id}`}>Assign project</Link>
-                <Link className="font-bold text-slate-700" to={`/admin/tasks/add?employeeId=${row._id}`}>Assign task</Link>
+                <Link className="font-bold text-slate-700" to={`/admin/assign-projects?employeeId=${row._id}`}>Assign project</Link>
+                <Link className="font-bold text-slate-700" to={`/admin/assign-tasks?employeeId=${row._id}`}>Assign task</Link>
                 <Link className="font-bold text-slate-700" to={`/admin/attendance?employeeId=${row._id}`}>View attendance</Link>
                 <button
                   className="font-bold text-amber-700"

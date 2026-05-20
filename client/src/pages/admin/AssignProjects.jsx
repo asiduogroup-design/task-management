@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DataTable from '../../components/common/DataTable.jsx';
 import Modal from '../../components/common/Modal.jsx';
+import { useSearchParams } from 'react-router-dom';
 import ModulePage from '../shared/ModulePage.jsx';
 import { employeeService } from '../../services/employeeService.js';
 import { projectService } from '../../services/projectService.js';
@@ -36,6 +37,8 @@ const RemoveIcon = () => (
 );
 
 const AssignProjects = () => {
+  const [searchParams] = useSearchParams();
+  const preselectedEmployeeId = searchParams.get('employeeId') || '';
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -125,6 +128,11 @@ const AssignProjects = () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!preselectedEmployeeId) return;
+    setSelectedEmployeeId(preselectedEmployeeId);
+  }, [preselectedEmployeeId]);
 
   const handleProjectChange = async (event) => {
     const projectId = event.target.value;

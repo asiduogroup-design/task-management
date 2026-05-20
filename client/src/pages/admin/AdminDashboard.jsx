@@ -8,7 +8,6 @@ import AttendanceSection from '../../components/dashboard/AttendanceSection.jsx'
 import ProjectsSection from '../../components/dashboard/ProjectsSection.jsx';
 import TasksSection from '../../components/dashboard/TasksSection.jsx';
 import AlertsSection from '../../components/dashboard/AlertsSection.jsx';
-import QuickActionsSection from '../../components/dashboard/QuickActionsSection.jsx';
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -45,18 +44,24 @@ const AdminDashboard = () => {
           return day !== 0 && day !== 6; // 0 = Sunday, 6 = Saturday
         };
 
-        const rawRecords = (attendance.data?.records || []).filter((rec) =>
-          isWeekday(rec.loginTime)
-        );
+        const rawRecords = (attendance.data?.records || []).filter((rec) => isWeekday(rec.date));
 
-        const attendanceRows = rawRecords.map((rec) => ({
-          _id: rec._id,
-          employee: rec.employeeId?.userId?.name || rec.employeeId?.employeeCode || 'Unknown',
-          loginTime: rec.loginTime || null,
-          logoutTime: rec.logoutTime || null,
-          totalWorkingHours: rec.totalWorkingHours || 0,
-          status: rec.status
-        }));
+        const attendanceRows = rawRecords.map((rec) => {
+          const sessions = Array.isArray(rec.sessions) ? rec.sessions : [];
+          const firstSession = sessions.length ? sessions[0] : null;
+          const lastSession = sessions.length ? sessions[sessions.length - 1] : null;
+
+          return {
+            _id: rec._id,
+            employee: rec.employeeId?.userId?.name || rec.employeeId?.employeeCode || 'Unknown',
+            loginTime: firstSession?.loginTime || null,
+            logoutTime: lastSession?.logoutTime || null,
+            totalWorkingHours: rec.totalWorkingHours || 0,
+            sessions,
+            totalBreakMinutes: rec.totalBreakMinutes || 0,
+            status: rec.status
+          };
+        });
 
         setData({
           summary: summary.data.summary || {},
@@ -97,8 +102,6 @@ const AdminDashboard = () => {
         {/* 4. Notifications and Alerts */}
         <AlertsSection alerts={data.alerts} />
 
-        {/* 5. Quick Actions */}
-        <QuickActionsSection />
       </div>
     </DashboardLayout>
   );

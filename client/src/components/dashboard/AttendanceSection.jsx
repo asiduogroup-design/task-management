@@ -12,12 +12,43 @@ const formatTime = (value) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : date.toLocaleTimeString('en-IN', {
+    : date.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true,
-      timeZone: 'Asia/Kolkata'
+      hour12: true
     });
+};
+
+const minutesFromSessions = (row) => {
+  const sessions = Array.isArray(row.sessions) ? row.sessions : [];
+  const sessionMinutes = sessions.reduce((sum, session) => {
+    if (typeof session?.durationMinutes === 'number' && session.durationMinutes > 0) {
+      return sum + session.durationMinutes;
+    }
+    if (session?.loginTime && session?.logoutTime) {
+      const start = new Date(session.loginTime);
+      const end = new Date(session.logoutTime);
+      const diff = Math.max(0, Math.round((end - start) / 60000));
+      return sum + diff;
+    }
+    return sum;
+  }, 0);
+
+  return Math.max(0, sessionMinutes - Number(row.totalBreakMinutes || 0));
+};
+
+const formatHours = (row) => {
+  let minutes = 0;
+
+  if (typeof row.totalWorkingHours === 'number' && row.totalWorkingHours > 0) {
+    minutes = Math.round(row.totalWorkingHours * 60);
+  } else {
+    minutes = minutesFromSessions(row);
+  }
+
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${m}m`;
 };
 
 const AttendanceSection = ({ attendance }) => {
@@ -44,7 +75,7 @@ const AttendanceSection = ({ attendance }) => {
           { 
             key: 'totalWorkingHours', 
             label: 'Hours', 
-            render: (row) => Number(row.totalWorkingHours || 0).toFixed(2) 
+            render: (row) => formatHours(row)
           },
           { 
             key: 'status', 

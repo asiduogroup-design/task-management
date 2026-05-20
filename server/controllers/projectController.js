@@ -484,6 +484,21 @@ export const addProjectMember = asyncHandler(async (req, res) => {
   res.status(201).json({ member });
 });
 
+export const updateProjectMember = asyncHandler(async (req, res) => {
+  const member = await ProjectMember.findOneAndUpdate(
+    { projectId: req.params.id, employeeId: req.params.employeeId },
+    { role: req.body.role || 'member' },
+    { new: true, runValidators: true }
+  ).populate({ path: 'employeeId', populate: { path: 'userId', select: 'name email role' } });
+
+  if (!member) {
+    res.status(404);
+    throw new Error('Project member not found');
+  }
+
+  res.json({ member });
+});
+
 export const removeProjectMember = asyncHandler(async (req, res) => {
   await ProjectMember.deleteOne({ projectId: req.params.id, employeeId: req.params.employeeId });
   res.json({ message: 'Project member removed' });

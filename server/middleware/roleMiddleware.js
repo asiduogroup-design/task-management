@@ -19,3 +19,4 @@ export const authorize = (...roles) => {
 export const adminRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 export const superAdminRoles = [ROLES.SUPER_ADMIN];
 export const managerRoles = [ROLES.SUPER_ADMIN, ROLES.MANAGER];
+export const managerAndAdminRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER];

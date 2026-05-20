@@ -18,17 +18,17 @@ import {
 	updateTaskStatus
 } from '../controllers/taskController.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { authorize, managerRoles, ROLES } from '../middleware/roleMiddleware.js';
+import { authorize, managerAndAdminRoles, managerRoles, ROLES } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
-router.use(protect, authorize(ROLES.SUPER_ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE));
+router.use(protect, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.MANAGER, ROLES.EMPLOYEE));
 router.get('/summary', getTaskSummary);
 router.get('/completed-history', getCompletedTaskHistory);
 router.route('/').get(getTasks).post(authorize(...managerRoles), createTask);
 router.route('/:id([0-9a-fA-F]{24})').get(getTaskById).put(authorize(...managerRoles), updateTask).delete(authorize(...managerRoles), deleteTask);
 router.patch('/:id([0-9a-fA-F]{24})/status', updateTaskStatus);
-router.patch('/:id([0-9a-fA-F]{24})/reassign', authorize(...managerRoles), reassignTask);
+router.patch('/:id([0-9a-fA-F]{24})/reassign', authorize(...managerAndAdminRoles), reassignTask);
 router.patch('/:id([0-9a-fA-F]{24})/deadline', authorize(...managerRoles), changeTaskDeadline);
 router.patch('/:id([0-9a-fA-F]{24})/complete', authorize(...managerRoles), markTaskCompleted);
 router.patch('/:id([0-9a-fA-F]{24})/reopen', authorize(...managerRoles), reopenTask);

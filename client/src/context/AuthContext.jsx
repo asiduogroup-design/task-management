@@ -10,8 +10,42 @@ const dashboardByRole = {
   employee: '/employee/dashboard'
 };
 
-const getStoredToken = () => localStorage.getItem('ewms_token') || sessionStorage.getItem('ewms_token');
-const getStoredUser = () => localStorage.getItem('ewms_user') || sessionStorage.getItem('ewms_user');
+const parseStoredUser = (value) => {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getStoredAuth = () => {
+  const candidates = [localStorage, sessionStorage];
+
+  for (const storage of candidates) {
+    const token = storage.getItem('ewms_token');
+    const rawUser = storage.getItem('ewms_user');
+
+    if (!token && !rawUser) continue;
+    if (!token || !rawUser) {
+      storage.removeItem('ewms_token');
+      storage.removeItem('ewms_user');
+      continue;
+    }
+
+    const user = parseStoredUser(rawUser);
+    if (!user) {
+      storage.removeItem('ewms_token');
+      storage.removeItem('ewms_user');
+      continue;
+    }
+
+    return { token, user, storage };
+  }
+
+  return { token: null, user: null, storage: null };
+};
+
+const getAuthStorage = () => getStoredAuth().storage;
 
 const clearStoredAuth = () => {
   localStorage.removeItem('ewms_token');
@@ -30,11 +64,11 @@ export const roleLabels = {
 export const getDashboardPath = (role) => dashboardByRole[role] || '/login';
 
 export const AuthProvider = ({ children }) => {
+  const initialAuth = getStoredAuth();
   const [user, setUser] = useState(() => {
-    const stored = getStoredUser();
-    return stored ? JSON.parse(stored) : null;
+    return initialAuth.user;
   });
-  const [token, setToken] = useState(() => getStoredToken());
+  const [token, setToken] = useState(() => initialAuth.token);
   const [loading, setLoading] = useState(true);
 
   const persist = useCallback((data, remember = true) => {
@@ -71,10 +105,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!getStoredToken()) return null;
+    if (!getStoredAuth().token) return null;
     const { data } = await authService.me();
     setUser(data.user);
-    const storage = localStorage.getItem('ewms_token') ? localStorage : sessionStorage;
+    const storage = getAuthStorage() || localStorage;
     storage.setItem('ewms_user', JSON.stringify(data.user));
     return data.user;
   }, []);
@@ -88,7 +122,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data } = await authService.me();
         setUser(data.user);
-        const storage = localStorage.getItem('ewms_token') ? localStorage : sessionStorage;
+        const storage = getAuthStorage() || localStorage;
         storage.setItem('ewms_user', JSON.stringify(data.user));
       } catch (error) {
         await logout();

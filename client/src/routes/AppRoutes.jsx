@@ -7,6 +7,8 @@ import EmployeeManagement from '../pages/admin/EmployeeManagement.jsx';
 import EmployeeForm from '../pages/admin/EmployeeForm.jsx';
 import EmployeeProfileAdmin from '../pages/admin/EmployeeProfileAdmin.jsx';
 import AttendanceManagement from '../pages/admin/AttendanceManagement.jsx';
+import AssignProjects from '../pages/admin/AssignProjects.jsx';
+import AssignTasks from '../pages/admin/AssignTasks.jsx';
 import ProjectManagement from '../pages/admin/ProjectManagement.jsx';
 import ProjectForm from '../pages/admin/ProjectForm.jsx';
 import ProjectDetails from '../pages/admin/ProjectDetails.jsx';
@@ -59,6 +61,8 @@ const AppRoutes = () => (
     <Route path="/admin/employees/:id/edit" element={<RoleBasedRoute roles={adminRoles}><EmployeeForm /></RoleBasedRoute>} />
     <Route path="/admin/employees/:id" element={<RoleBasedRoute roles={adminRoles}><EmployeeProfileAdmin /></RoleBasedRoute>} />
     <Route path="/admin/attendance" element={<RoleBasedRoute roles={adminRoles}><AttendanceManagement /></RoleBasedRoute>} />
+    <Route path="/admin/assign-projects" element={<RoleBasedRoute roles={adminRoles}><AssignProjects /></RoleBasedRoute>} />
+    <Route path="/admin/assign-tasks" element={<RoleBasedRoute roles={adminRoles}><AssignTasks /></RoleBasedRoute>} />
     <Route path="/admin/projects" element={<RoleBasedRoute roles={superAdminRoles}><ProjectManagement /></RoleBasedRoute>} />
     <Route path="/admin/projects/add" element={<RoleBasedRoute roles={superAdminRoles}><ProjectForm /></RoleBasedRoute>} />
     <Route path="/admin/projects/:id/edit" element={<RoleBasedRoute roles={superAdminRoles}><ProjectForm /></RoleBasedRoute>} />

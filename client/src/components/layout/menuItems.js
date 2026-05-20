@@ -15,6 +15,8 @@ export const adminMenu = [
   ['Dashboard', '/admin/dashboard', 'dashboard'],
   ['Employees', '/admin/employees', 'employees'],
   ['Attendance', '/admin/attendance', 'attendance'],
+  ['Assign Projects', '/admin/assign-projects', 'projects'],
+  ['Assign Tasks', '/admin/assign-tasks', 'tasks'],
   ['Leave Management', '/admin/leaves', 'leaveManagement'],
   ['Reports', '/admin/reports', 'reports'],
   ['Notifications', '/admin/notifications', 'notifications']

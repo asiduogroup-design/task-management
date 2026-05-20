@@ -198,17 +198,22 @@ export const getAttendanceSummary = asyncHandler(async (req, res) => {
     lateLogin = records.filter((r) => r.status === 'late').length;
     earlyLogoutCount = records.filter((r) => r.earlyLogout).length;
     absent = records.filter((r) => r.status === 'absent').length;
-    totalWorkingHours = records.reduce((sum, r) => sum + (r.totalWorkingHours || 0), 0);
-    notMarked = 7 - records.length;
+    const weekdayRecords = records.filter((record) => {
+      const recordDate = new Date(record.date || record.loginTime || record.createdAt);
+      const dayOfWeek = recordDate.getDay();
+      return !Number.isNaN(recordDate.getTime()) && dayOfWeek !== 0 && dayOfWeek !== 6;
+    });
+    totalWorkingHours = weekdayRecords.reduce((sum, r) => sum + (r.totalWorkingHours || 0), 0);
+    notMarked = 5 - weekdayRecords.length;
     res.json({
       summary: {
-        present,
-        leaves: onLeave,
-        absents: absent + notMarked,
-        lateLogin,
-        earlyLogout: earlyLogoutCount,
+        present: weekdayRecords.filter((r) => ['logged_in', 'on_break', 'logged_out', 'late'].includes(r.status)).length,
+        leaves: weekdayRecords.filter((r) => r.status === 'on_leave').length,
+        absents: weekdayRecords.filter((r) => r.status === 'absent').length + Math.max(0, notMarked),
+        lateLogin: weekdayRecords.filter((r) => r.status === 'late').length,
+        earlyLogout: weekdayRecords.filter((r) => r.earlyLogout).length,
         workingHours: Number(totalWorkingHours.toFixed(2)),
-        totalDays: 7,
+        totalDays: 5,
         maxWorkingHours: 40 // Assume 8h x 5d
       }
     });

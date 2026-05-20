@@ -40,7 +40,15 @@ const AdminDashboard = () => {
         ]);
 
         // Normalize the raw records to the shape AttendanceSection expects.
-        const rawRecords = attendance.data?.records || [];
+        const isWeekday = (date) => {
+          const day = new Date(date).getDay();
+          return day !== 0 && day !== 6; // 0 = Sunday, 6 = Saturday
+        };
+
+        const rawRecords = (attendance.data?.records || []).filter((rec) =>
+          isWeekday(rec.loginTime)
+        );
+
         const attendanceRows = rawRecords.map((rec) => ({
           _id: rec._id,
           employee: rec.employeeId?.userId?.name || rec.employeeId?.employeeCode || 'Unknown',

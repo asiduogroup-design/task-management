@@ -185,7 +185,8 @@ const EmployeeDashboard = () => {
 
     const weekRecords = records.filter((item) => {
       const itemDate = new Date(item.date);
-      return !Number.isNaN(itemDate.getTime()) && itemDate >= weekStart && itemDate < weekEnd;
+      const dayOfWeek = itemDate.getDay();
+      return !Number.isNaN(itemDate.getTime()) && itemDate >= weekStart && itemDate < weekEnd && dayOfWeek !== 0 && dayOfWeek !== 6;
     });
 
     const present = weekRecords.filter((r) => isPresentStatus(r.status)).length;
@@ -193,7 +194,7 @@ const EmployeeDashboard = () => {
     const absents = weekRecords.filter((r) => r.status === 'absent').length;
     const lateDays = weekRecords.filter((r) => r.status === 'late').length;
     const workingHours = weekRecords.reduce((sum, r) => sum + Number(r.totalWorkingHours || 0), 0);
-    const totalDays = 7;
+    const totalDays = 5;
 
     setWeekSummary({
       present,
@@ -202,7 +203,7 @@ const EmployeeDashboard = () => {
       lateDays,
       workingHours: Number(workingHours.toFixed(2)),
       totalDays,
-      maxWorkingHours: totalDays * 8,
+      maxWorkingHours: 40,
       weekLabel: `${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} - ${new Date(weekEnd - 1).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
     });
   };
@@ -732,28 +733,28 @@ const EmployeeDashboard = () => {
                     <span className="font-bold" style={{ color: summaryColors.present }}>{weekSummary.present || 0}</span>
                   </div>
                   <div className="w-full h-2 rounded bg-slate-100 mb-3">
-                    <div style={{ width: `${Math.min(100, (weekSummary.present / (weekSummary.totalDays || 7)) * 100)}%`, background: summaryColors.present }} className="h-2 rounded transition-all" />
+                    <div style={{ width: `${Math.min(100, (weekSummary.present / (weekSummary.totalDays || 5)) * 100)}%`, background: summaryColors.present }} className="h-2 rounded transition-all" />
                   </div>
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="font-medium">Leaves</span>
                     <span className="font-bold" style={{ color: summaryColors.leave }}>{weekSummary.leaves || 0}</span>
                   </div>
                   <div className="w-full h-2 rounded bg-slate-100 mb-3">
-                    <div style={{ width: `${Math.min(100, (weekSummary.leaves / (weekSummary.totalDays || 7)) * 100)}%`, background: summaryColors.leave }} className="h-2 rounded transition-all" />
+                    <div style={{ width: `${Math.min(100, (weekSummary.leaves / (weekSummary.totalDays || 5)) * 100)}%`, background: summaryColors.leave }} className="h-2 rounded transition-all" />
                   </div>
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="font-medium">Absents</span>
                     <span className="font-bold" style={{ color: summaryColors.absent }}>{weekSummary.absents || 0}</span>
                   </div>
                   <div className="w-full h-2 rounded bg-slate-100 mb-3">
-                    <div style={{ width: `${Math.min(100, (weekSummary.absents / (weekSummary.totalDays || 7)) * 100)}%`, background: summaryColors.absent }} className="h-2 rounded transition-all" />
+                    <div style={{ width: `${Math.min(100, (weekSummary.absents / (weekSummary.totalDays || 5)) * 100)}%`, background: summaryColors.absent }} className="h-2 rounded transition-all" />
                   </div>
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="font-medium">Late days</span>
                     <span className="font-bold" style={{ color: summaryColors.leave }}>{weekSummary.lateDays || 0}</span>
                   </div>
                   <div className="w-full h-2 rounded bg-slate-100 mb-3">
-                    <div style={{ width: `${Math.min(100, (weekSummary.lateDays / (weekSummary.totalDays || 22)) * 100)}%`, background: summaryColors.leave }} className="h-2 rounded transition-all" />
+                    <div style={{ width: `${Math.min(100, (weekSummary.lateDays / (weekSummary.totalDays || 5)) * 100)}%`, background: summaryColors.leave }} className="h-2 rounded transition-all" />
                   </div>
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="font-medium">Working hours</span>
@@ -763,7 +764,7 @@ const EmployeeDashboard = () => {
                     <div style={{ width: `${Math.min(100, (weekSummary.workingHours / (weekSummary.maxWorkingHours || 40)) * 100)}%`, background: summaryColors.hours }} className="h-2 rounded transition-all" />
                   </div>
                   <div className="flex justify-between text-xs text-slate-400 mt-1">
-                    <span>Total working days: {weekSummary.totalDays || 22}</span>
+                    <span>Total working days: {weekSummary.totalDays || 5}</span>
                     <span>Max hrs: {weekSummary.maxWorkingHours || 176}</span>
                   </div>
                 </>

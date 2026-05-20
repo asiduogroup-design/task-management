@@ -13,6 +13,7 @@ const allowedAssigneeRoles = ['manager', 'employee'];
 const AssignTasks = () => {
   const [searchParams] = useSearchParams();
   const preselectedEmployeeId = searchParams.get('employeeId') || '';
+  const isEmployeePinned = Boolean(preselectedEmployeeId);
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -30,6 +31,16 @@ const AssignTasks = () => {
     () => employees.filter((employee) => allowedAssigneeRoles.includes(employee.userId?.role)),
     [employees]
   );
+
+  const pinnedEmployee = useMemo(
+    () => eligibleEmployees.find((employee) => String(employee._id) === String(preselectedEmployeeId)) || null,
+    [eligibleEmployees, preselectedEmployeeId]
+  );
+
+  const assigneeOptions = useMemo(() => {
+    if (!isEmployeePinned) return eligibleEmployees;
+    return pinnedEmployee ? [pinnedEmployee] : [];
+  }, [eligibleEmployees, isEmployeePinned, pinnedEmployee]);
 
   const setFilter = (key, value) => {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -160,6 +171,8 @@ const AssignTasks = () => {
         </select>
       </SearchFilterBar>
 
+      {isEmployeePinned ? <p className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-700">Assignee is preselected from Employee Management.</p> : null}
+
       {error ? <p className="mb-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p> : null}
 
       <DataTable
@@ -187,11 +200,12 @@ const AssignTasks = () => {
             render: (row) => (
               <select
                 className="form-field min-w-[220px]"
+                disabled={isEmployeePinned}
                 value={selectedByTask[row._id] || ''}
                 onChange={(event) => setSelectedByTask((current) => ({ ...current, [row._id]: event.target.value }))}
               >
                 <option value="">Select manager or employee</option>
-                {eligibleEmployees.map((employee) => (
+                {assigneeOptions.map((employee) => (
                   <option key={employee._id} value={employee._id}>
                     {employee.userId?.name || employee.employeeCode} ({employee.userId?.role || 'employee'})
                   </option>

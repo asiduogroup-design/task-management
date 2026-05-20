@@ -39,6 +39,7 @@ const RemoveIcon = () => (
 const AssignProjects = () => {
   const [searchParams] = useSearchParams();
   const preselectedEmployeeId = searchParams.get('employeeId') || '';
+  const isEmployeePinned = Boolean(preselectedEmployeeId);
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
@@ -56,6 +57,11 @@ const AssignProjects = () => {
     [employees]
   );
 
+  const pinnedEmployee = useMemo(
+    () => eligibleEmployees.find((employee) => String(employee._id) === String(preselectedEmployeeId)) || null,
+    [eligibleEmployees, preselectedEmployeeId]
+  );
+
   const selectedProject = useMemo(
     () => projects.find((project) => project._id === selectedProjectId) || null,
     [projects, selectedProjectId]
@@ -69,6 +75,16 @@ const AssignProjects = () => {
   const availableEmployees = useMemo(
     () => eligibleEmployees.filter((employee) => !assignedEmployeeIds.has(String(employee._id))),
     [eligibleEmployees, assignedEmployeeIds]
+  );
+
+  const memberOptions = useMemo(() => {
+    if (!isEmployeePinned) return availableEmployees;
+    return pinnedEmployee ? [pinnedEmployee] : [];
+  }, [availableEmployees, isEmployeePinned, pinnedEmployee]);
+
+  const isPinnedEmployeeAlreadyAssigned = useMemo(
+    () => (isEmployeePinned ? assignedEmployeeIds.has(String(preselectedEmployeeId)) : false),
+    [assignedEmployeeIds, isEmployeePinned, preselectedEmployeeId]
   );
 
   const loadProjectDetail = async (projectId) => {
@@ -229,14 +245,17 @@ const AssignProjects = () => {
 
           <label className="block">
             <span className="mb-1 block text-sm font-semibold text-slate-700">Member</span>
-            <select className="form-field" value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)}>
+            <select className="form-field" disabled={isEmployeePinned} value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)}>
               <option value="">Select manager or employee</option>
-              {availableEmployees.map((employee) => (
+              {memberOptions.map((employee) => (
                 <option key={employee._id} value={employee._id}>
                   {employee.userId?.name || employee.employeeCode} ({employee.userId?.role || 'employee'})
                 </option>
               ))}
             </select>
+            {isEmployeePinned ? (
+              <p className="mt-1 text-xs font-semibold text-slate-500">Employee is preselected from Employee Management.</p>
+            ) : null}
           </label>
 
           <label className="block">
@@ -245,11 +264,12 @@ const AssignProjects = () => {
           </label>
 
           <div className="flex items-end">
-            <button className="btn-primary w-full" disabled={saving || !selectedProjectId || !selectedEmployeeId} type="submit">
+            <button className="btn-primary w-full" disabled={saving || !selectedProjectId || !selectedEmployeeId || isPinnedEmployeeAlreadyAssigned} type="submit">
               {saving ? 'Assigning...' : 'Assign to project'}
             </button>
           </div>
         </form>
+        {isPinnedEmployeeAlreadyAssigned ? <p className="mt-3 text-sm font-semibold text-amber-700">This employee is already assigned to the selected project.</p> : null}
       </section>
 
       {selectedProject ? (
